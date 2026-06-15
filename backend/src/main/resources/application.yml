@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: nexuscommerce-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/nexuscommerce}
+    username: ${SPRING_DATASOURCE_USERNAME:nexus}
+    password: ${SPRING_DATASOURCE_PASSWORD:nexus_local_pw}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: commerce
+        format_sql: false
+
+  flyway:
+    enabled: true
+    schemas: commerce
+    default-schema: commerce
+    locations: classpath:db/migration
+
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://nexus_app:mongo_app_local_pw@localhost:27017/nexuscatalog}
+      auto-index-creation: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+# Application-specific configuration (bound to typed @ConfigurationProperties)
+app:
+  jwt:
+    # Base64-encoded HMAC secret (>= 256 bits). Provided per-environment via env var.
+    # A dev-only default is set in application-dev.yml.
+    secret: ${JWT_SECRET:}
+    access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:15}
+    issuer: nexuscommerce
+  auth:
+    refresh:
+      ttl-days: ${JWT_REFRESH_TTL_DAYS:7}
+    cookie:
+      name: ${AUTH_COOKIE_NAME:nexus_refresh}
+      secure: ${AUTH_COOKIE_SECURE:false}
+      same-site: ${AUTH_COOKIE_SAMESITE:Lax}
+      path: /api/auth
+      domain: ${AUTH_COOKIE_DOMAIN:}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs

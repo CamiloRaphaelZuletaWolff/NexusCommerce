@@ -90,7 +90,7 @@ The project is built incrementally; each phase is completed, verified, and
 documented before the next begins.
 
 - [x] **Phase 1 — Foundation:** repo structure, Docker infra, docs scaffolding
-- [ ] **Phase 2 — Backend core:** Spring Boot, security, auth/RBAC, persistence
+- [x] **Phase 2 — Backend core:** Spring Boot, JWT+RBAC security, auth (refresh-cookie rotation), 3NF persistence via Flyway, Mongo connectivity, audit logging
 - [ ] **Phase 3 — Catalog + multi-store:** MongoDB catalog, dynamic attributes
 - [ ] **Phase 4 — Orders + checkout + security:** ACID checkout, encryption, procedures/views
 - [ ] **Phase 5 — Frontend:** storefront, catalog, cart, checkout, dashboards

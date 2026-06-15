@@ -80,16 +80,68 @@ docker compose down       # stop, keep data
 docker compose down -v    # stop, wipe data (re-runs bootstrap next time)
 ```
 
-## 4. Run the backend (Phase 2 — coming next)
+## 4. Run the backend (Phase 2 — available now)
+
+**JDK 21 is the canonical build/runtime** (Spring Boot 3.5 targets ≤ JDK 21).
+You don't need Maven or a JDK installed locally — everything runs in Docker.
+
+### Easiest: full stack via Docker Compose (databases + backend)
 
 ```bash
-cd backend
-cp .env.example .env       # adjust if you changed infra credentials
-./mvnw spring-boot:run     # Windows: .\mvnw.cmd spring-boot:run
+cd infra
+docker compose -f docker-compose.yml -f docker-compose.app.yml up -d --build
 ```
 
-API will be available at `http://localhost:8080`, OpenAPI docs at
-`http://localhost:8080/swagger-ui.html`.
+This builds the backend image (multi-stage, `backend/Dockerfile`) and starts it on
+the shared network alongside PostgreSQL + MongoDB. The API comes up on
+`http://localhost:8080` after ~30s (watch `docker logs -f nexus-backend`).
+
+### Build & test only (no run)
+
+```bash
+# from the repo root — uses a cached .m2 volume so re-runs are fast
+docker run --rm -v "$PWD/backend:/workspace" -v nexus-m2:/root/.m2 \
+  -w /workspace maven:3.9-eclipse-temurin-21 mvn -B test
+```
+
+> Integration tests (`*IT`, Testcontainers) run with `mvn verify` on a
+> Docker-enabled host; the `mvn test` gate runs unit + ArchUnit tests only.
+
+### Key endpoints
+
+- API base: `http://localhost:8080`
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- Health (db + mongo): `http://localhost:8080/actuator/health`
+- Catalog Mongo probe: `http://localhost:8080/api/catalog/health`
+
+### Dev demo accounts (dev profile only — never use in production)
+
+| Email | Role | Password |
+|-------|------|----------|
+| `admin@nexus.local` | ADMIN | `Password123!` |
+| `manager@nexus.local` | STORE_MANAGER | `Password123!` |
+| `customer@nexus.local` | CUSTOMER | `Password123!` |
+
+Example: log in and call an authenticated endpoint.
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"manager@nexus.local","password":"Password123!"}' \
+  | grep -oE '"accessToken" *: *"[^"]*"' | sed -E 's/.*"accessToken" *: *"//;s/"$//')
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/auth/me
+```
+
+> The refresh token is set as an HttpOnly cookie (`nexus_refresh`); browsers send
+> it automatically to `/api/auth/refresh`. From the SPA, call the API with
+> `credentials: 'include'`.
+
+### Stopping the backend
+
+```bash
+cd infra
+docker compose -f docker-compose.yml -f docker-compose.app.yml stop backend  # stop app, keep DBs
+```
 
 ## 5. Run the frontend (Phase 5 — coming later)
 

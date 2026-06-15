@@ -58,19 +58,21 @@ clean architecture, fully documented.
 
 ## 5. Academic / engineering requirements checklist
 
-Tracked here so nothing is missed:
+Tracked here so nothing is missed (✅ = done, ◑ = partial):
 
-- [ ] 3NF relational model
-- [ ] ACID transactions for checkout/payment
-- [ ] Encryption of sensitive data (column-level, payments)
-- [ ] RBAC authorization
-- [ ] SQL injection protection (parameterized / JPA)
-- [ ] Stored procedures
-- [ ] Views
-- [ ] Subqueries
-- [ ] Mongo operators: `$gt`, `$lt`, `$and`, `$or`
-- [ ] Mongo array queries: tags, variants, brands, category labels
-- [ ] UUID-based customer-data sync between PostgreSQL and MongoDB
+- [x] 3NF relational model — *Phase 2* (roles/users/user_roles/stores, junction table)
+- [ ] ACID transactions for checkout/payment — *Phase 4*
+- [ ] Encryption of sensitive data (column-level, payments) — *Phase 4*
+- [x] RBAC authorization — *Phase 2* (roles + `@PreAuthorize` + ownership checks)
+- [x] SQL injection protection (parameterized / JPA) — *Phase 2* (Spring Data only)
+- [ ] Stored procedures — *Phase 4*
+- [ ] Views — *Phase 4*
+- [ ] Subqueries — *Phase 4*
+- [ ] Mongo operators: `$gt`, `$lt`, `$and`, `$or` — *Phase 3*
+- [ ] Mongo array queries: tags, variants, brands, category labels — *Phase 3*
+- [ ] ◑ UUID cross-DB integration — *strategy done (Phase 2, ADR-0007); customer/store sync Phase 3*
+- [x] Audit logging (added requirement) — *Phase 2* (register/login±/refresh/logout/store-create)
+- [x] Stateless JWT + refresh-cookie rotation (added requirement) — *Phase 2* (ADR-0008)
 
 ## 6. Security baseline
 
@@ -143,7 +145,28 @@ npm run build
 - **Phase 1 — Foundation:** ✅ complete (repo structure, Docker infra, env
   templates, docs, ADRs). Verified: `docker compose config` valid; databases
   start healthy.
-- **Phases 2–8:** not started. See README roadmap.
+- **Phase 2 — Backend Core:** ✅ complete. Spring Boot 3.5.6 modular monolith:
+  Spring Security (JWT access + HttpOnly refresh cookie w/ rotation, BCrypt,
+  RBAC), users/roles + stores on PostgreSQL via Flyway (3NF), MongoDB
+  connectivity + validated read/write probe, audit logging, ArchUnit boundary
+  tests. Verified: 24 unit/ArchUnit tests pass in JDK-21 Docker; multi-stage
+  image builds; app runs on `nexus-net` with all health checks UP; full
+  register→login→refresh→create-store→audit flow exercised live with RBAC.
+  ADRs 0006–0009. New: backend build/runtime is JDK 21 in Docker (ADR-0004/R1).
+- **Phases 3–8:** not started. See README roadmap.
+
+### Dev demo credentials (dev profile only, never in prod)
+`admin@nexus.local`, `manager@nexus.local`, `customer@nexus.local` — all
+password `Password123!`. Seeded by `DevDataInitializer`.
+
+### Build / run the backend (JDK 21 canonical)
+```bash
+# Build + test (no local Maven needed):
+docker run --rm -v "$PWD/backend:/workspace" -v nexus-m2:/root/.m2 \
+  -w /workspace maven:3.9-eclipse-temurin-21 mvn -B test
+# Run full stack (DBs + backend) from infra/:
+docker compose -f docker-compose.yml -f docker-compose.app.yml up -d --build
+```
 
 ## 12. Service ports (local)
 

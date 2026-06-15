@@ -88,8 +88,12 @@ keeping them coherent. See [ADR-0003](adr/0003-uuid-cross-db-integration.md).
 
 Security is a first-class concern, layered defense-in-depth:
 
-- **Authentication:** stateless **JWT** (short-lived access token + refresh
-  token). Passwords hashed with **BCrypt**. See [ADR-0005](adr/0005-jwt-stateless-auth.md).
+- **Authentication:** stateless **JWT**. The **access token** (~15 min, HS384) is
+  sent in the `Authorization` header; the **refresh token** is an opaque value in
+  an **HttpOnly + Secure + SameSite cookie**, stored server-side only as a
+  SHA-256 hash, with **rotation on refresh** and **revocation on logout**.
+  Passwords hashed with **BCrypt**. See [ADR-0005](adr/0005-jwt-stateless-auth.md)
+  and [ADR-0008](adr/0008-token-auth-strategy.md).
 - **Authorization:** **RBAC** with roles (e.g. `CUSTOMER`, `STORE_MANAGER`,
   `ADMIN`) enforced via Spring Security + method security.
 - **Input handling:** server-side **Bean Validation** on every DTO; output
@@ -121,6 +125,23 @@ Security is a first-class concern, layered defense-in-depth:
 | `security`    | —          | Spring Security, JWT filter, RBAC, encryption |
 | `shared`      | —          | DTO base, error handling, audit, config |
 
+> **Phase 2 status:** `auth`, `users`, `stores`, `security`, `audit`, `shared`
+> implemented and verified. `catalog` is present but limited to MongoDB
+> connectivity + a read/write health probe (full catalog domain is Phase 3).
+
+### Phase 2 API surface
+
+| Method | Path | Auth |
+|---|---|---|
+| POST | `/api/auth/register` · `/login` | public (sets refresh cookie) |
+| POST | `/api/auth/refresh` · `/logout` | refresh cookie |
+| GET | `/api/auth/me` | access JWT |
+| GET | `/api/stores` · `/api/stores/{slug}` | public |
+| POST | `/api/stores` | `STORE_MANAGER`/`ADMIN` |
+| PUT | `/api/stores/{id}` | owner or `ADMIN` |
+| DELETE | `/api/stores/{id}` | `ADMIN` |
+| GET | `/api/catalog/health` · `/actuator/health` · `/swagger-ui.html` | public |
+
 ## 7. Frontend architecture _(Phase 5)_
 
 App Router with route groups for storefront, auth, and dashboards. Server
@@ -146,3 +167,7 @@ and one-time bootstrap scripts, plus optional pgAdmin and mongo-express behind a
 | [0003](adr/0003-uuid-cross-db-integration.md) | UUID as cross-database key |
 | [0004](adr/0004-maven-build-tool.md) | Maven as backend build tool |
 | [0005](adr/0005-jwt-stateless-auth.md) | Stateless JWT authentication |
+| [0006](adr/0006-flyway-and-3nf-schema.md) | Flyway-managed, 3NF schema |
+| [0007](adr/0007-uuid-generation-strategy.md) | UUID generation strategy (app-side v4) |
+| [0008](adr/0008-token-auth-strategy.md) | Access header + refresh HttpOnly cookie |
+| [0009](adr/0009-audit-logging.md) | Audit logging from Phase 2 |
