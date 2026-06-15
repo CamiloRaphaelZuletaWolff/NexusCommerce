@@ -43,11 +43,13 @@ public class AuditService {
         }
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void success(AuditEventType eventType, UUID actorUserId, RequestMetadata metadata,
                         Map<String, ?> details) {
         record(eventType, AuditOutcome.SUCCESS, actorUserId, metadata, details);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void failure(AuditEventType eventType, UUID actorUserId, RequestMetadata metadata,
                         Map<String, ?> details) {
         record(eventType, AuditOutcome.FAILURE, actorUserId, metadata, details);

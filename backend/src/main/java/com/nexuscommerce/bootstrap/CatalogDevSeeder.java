@@ -62,7 +62,7 @@ public class CatalogDevSeeder implements ApplicationRunner {
         String elecId = electronics.get().getId().toString();
         String fashId = fashion.get().getId().toString();
 
-        productRepository.saveAll(List.of(
+        List<Product> products = List.of(
                 product(elecId, "ELEC-UB14", "Nexus UltraBook 14", "laptops",
                         List.of("electronics", "laptops"), List.of("laptop", "ultrabook", "portable"),
                         "Nexies", new BigDecimal("1299.00"),
@@ -99,8 +99,9 @@ public class CatalogDevSeeder implements ApplicationRunner {
                         "UrbanWear", new BigDecimal("79.00"),
                         Map.of("material", "mesh"),
                         List.of(variant("FASH-SNK-42", Map.of("size", "42"), null, 15),
-                                variant("FASH-SNK-43", Map.of("size", "43"), null, 11)))));
+                                variant("FASH-SNK-43", Map.of("size", "43"), null, 11))));
 
+        productRepository.saveAll(products);
         log.info("Seeded demo catalog: {} products", productRepository.count());
     }
 

@@ -92,7 +92,7 @@ documented before the next begins.
 - [x] **Phase 1 — Foundation:** repo structure, Docker infra, docs scaffolding
 - [x] **Phase 2 — Backend core:** Spring Boot, JWT+RBAC security, auth (refresh-cookie rotation), 3NF persistence via Flyway, Mongo connectivity, audit logging
 - [x] **Phase 3 — Catalog + multi-store:** MongoDB catalog with category-specific dynamic attributes, operator/array search (`$gt`/`$lt`/`$and`/`$or`/`$in`), UUID product↔store linkage, and PostgreSQL↔MongoDB customer sync
-- [ ] **Phase 4 — Orders + checkout + security:** ACID checkout, encryption, procedures/views
+- [x] **Phase 4 — Orders + checkout + security:** cart, single-transaction **ACID checkout**, **AES-256-GCM** column encryption of payment data, inventory **stored procedure**, reporting **views + function + subqueries**, audit logging
 - [ ] **Phase 5 — Frontend:** storefront, catalog, cart, checkout, dashboards
 - [ ] **Phase 6 — Integration polish:** end-to-end wiring, UX states
 - [ ] **Phase 7 — Testing + docs:** tests, diagrams, API docs, screenshots

@@ -138,6 +138,41 @@ Managers/admins create products for stores they own (`POST /api/catalog/products
 admins manage categories/brands. A customer's MongoDB profile (synced from the
 PostgreSQL user by UUID) is at `GET /api/catalog/me/profile` (authenticated).
 
+### Cart, checkout & orders (authenticated)
+
+```bash
+# (TOKEN from a customer login as shown above)
+PID=$(curl -s "http://localhost:8080/api/catalog/products?q=Tee" | grep -oE '"id" *: *"[^"]*"' | head -1 | sed -E 's/.*"id" *: *"//;s/"//')
+
+# add to cart, then view it
+curl -s -X POST http://localhost:8080/api/cart/items -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d "{\"productId\":\"$PID\",\"quantity\":2}"
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/cart
+
+# ACID checkout: reserves stock (stored procedure) + creates order + records an
+# ENCRYPTED payment, all in one transaction. (Demo card; CVV is never stored.)
+curl -s -X POST http://localhost:8080/api/checkout -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"shipping":{"name":"Demo","line1":"1 Market St","city":"Lima","postalCode":"15001","country":"PE"},
+       "payment":{"number":"4111111111111111","holderName":"Demo","expiry":"12/30","cvv":"123"}}'
+
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/orders   # order history
+```
+
+### Analytics (ADMIN / STORE_MANAGER) — SQL views, function, subquery
+
+```bash
+# (ATOKEN from an admin login)
+curl -s -H "Authorization: Bearer $ATOKEN" http://localhost:8080/api/analytics/store-revenue              # view
+curl -s -H "Authorization: Bearer $ATOKEN" http://localhost:8080/api/analytics/store-revenue/above-average # subquery
+curl -s -H "Authorization: Bearer $ATOKEN" http://localhost:8080/api/analytics/top-products?limit=5        # view
+curl -s -H "Authorization: Bearer $ATOKEN" http://localhost:8080/api/analytics/stores/<storeId>/summary    # stored function
+```
+
+> **Encryption check:** card data is encrypted at rest. Inspect it with
+> `docker exec nexus-postgres psql -U nexus -d nexuscommerce -c "SELECT card_last4, left(card_number_enc,24) FROM commerce.payments;"`
+> — you'll see `last4` in clear and only ciphertext for the card number.
+
 ### Dev demo accounts (dev profile only — never use in production)
 
 | Email | Role | Password |

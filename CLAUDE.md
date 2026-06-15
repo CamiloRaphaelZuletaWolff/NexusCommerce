@@ -61,13 +61,13 @@ clean architecture, fully documented.
 Tracked here so nothing is missed (✅ = done, ◑ = partial):
 
 - [x] 3NF relational model — *Phase 2* (roles/users/user_roles/stores, junction table)
-- [ ] ACID transactions for checkout/payment — *Phase 4*
-- [ ] Encryption of sensitive data (column-level, payments) — *Phase 4*
+- [x] ACID transactions for checkout/payment — *Phase 4* (single-tx checkout, ADR-0012)
+- [x] Encryption of sensitive data (column-level, payments) — *Phase 4* (AES-256-GCM, ADR-0013)
 - [x] RBAC authorization — *Phase 2* (roles + `@PreAuthorize` + ownership checks)
 - [x] SQL injection protection (parameterized / JPA) — *Phase 2* (Spring Data only)
-- [ ] Stored procedures — *Phase 4*
-- [ ] Views — *Phase 4*
-- [ ] Subqueries — *Phase 4*
+- [x] Stored procedures — *Phase 4* (`sp_reserve_inventory`, `fn_store_sales_summary`)
+- [x] Views — *Phase 4* (`v_store_revenue`, `v_top_products`, `v_order_summary`)
+- [x] Subqueries — *Phase 4* (views + above-average revenue query, ADR-0014)
 - [x] Mongo operators: `$gt`, `$lt`, `$and`, `$or` — *Phase 3* (product search via MongoTemplate)
 - [x] Mongo array queries: tags, variants, brands, category labels — *Phase 3* (`$in`)
 - [x] UUID cross-DB integration — *Phase 3* (products→stores by UUID; user→Mongo customer profile sync, ADR-0011)
@@ -164,7 +164,17 @@ npm run build
   customer 403), customer sync, audit. 30 unit/ArchUnit tests pass (added catalog
   search + product-service tests) plus a Testcontainers IT covering real-Mongo
   product search. ADRs 0010–0011.
-- **Phases 4–8:** not started. See README roadmap.
+- **Phase 4 — Orders + Checkout + Security:** ✅ complete. Cart, ACID checkout
+  (single transaction: reserve stock via stored procedure → order + items →
+  encrypted payment → close cart; rolls back atomically), inventory with
+  `sp_reserve_inventory` (`FOR UPDATE`), AES-256-GCM column encryption of card
+  data (only brand/last4 in clear, CVV never stored), order history, and an
+  analytics layer over SQL views + a stored function + a subquery (RBAC-gated).
+  Audit: ORDER_PLACED / PAYMENT_CAPTURED / CHECKOUT_FAILED (durable REQUIRES_NEW —
+  fixed self-invocation bug). Migrations V6–V10. ADRs 0012–0014. 36 unit/ArchUnit
+  tests pass; verified live: checkout decrements stock, card encrypted at rest,
+  insufficient stock → 400 + rollback, views/function/subquery return correct data.
+- **Phases 5–8:** not started. See README roadmap.
 
 ### Dev demo credentials (dev profile only, never in prod)
 `admin@nexus.local`, `manager@nexus.local`, `customer@nexus.local` — all

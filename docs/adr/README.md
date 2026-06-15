@@ -17,3 +17,6 @@ never deleted (superseded ones are marked as such).
 | [0009](0009-audit-logging.md) | Audit logging from Phase 2 | Accepted |
 | [0010](0010-mongodb-catalog-modeling.md) | MongoDB catalog modeling + Decimal128 price storage | Accepted |
 | [0011](0011-event-driven-customer-sync.md) | Event-driven cross-DB customer sync (UUID) | Accepted |
+| [0012](0012-acid-checkout-inventory-procedure.md) | ACID checkout + stored-procedure inventory reservation | Accepted |
+| [0013](0013-column-encryption-payments.md) | Column-level encryption of payment data (AES-256-GCM) | Accepted |
+| [0014](0014-sql-reporting-views-functions.md) | SQL reporting: views, function, subqueries | Accepted |

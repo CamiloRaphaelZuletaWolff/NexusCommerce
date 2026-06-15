@@ -18,3 +18,6 @@ app:
     # DEV-ONLY secret so the app boots without env vars. NEVER use in production.
     # Base64 of "dev-only-nexuscommerce-jwt-secret-please-change-in-production".
     secret: ${JWT_SECRET:ZGV2LW9ubHktbmV4dXNjb21tZXJjZS1qd3Qtc2VjcmV0LXBsZWFzZS1jaGFuZ2UtaW4tcHJvZHVjdGlvbg==}
+  encryption:
+    # DEV-ONLY AES-256 key (Base64). NEVER use in production; supply APP_ENCRYPTION_KEY instead.
+    key: ${APP_ENCRYPTION_KEY:kCh2wkMoNc9+NNU11xepaMDcIW9rG3KkCSP6XBIH/TA=}

@@ -125,8 +125,9 @@ Security is a first-class concern, layered defense-in-depth:
 | `security`    | —          | Spring Security, JWT filter, RBAC, encryption |
 | `shared`      | —          | DTO base, error handling, audit, config |
 
-> **Status:** `auth`, `users`, `stores`, `security`, `audit`, `shared` (Phase 2)
-> and `catalog` + `integration` (Phase 3) implemented and verified.
+> **Status:** `auth`, `users`, `stores`, `security`, `audit`, `shared` (Phase 2),
+> `catalog` + `integration` (Phase 3), and `cart`, `orders`, `payments`,
+> `inventory`, `analytics` (Phase 4) implemented and verified.
 
 ### Phase 2 API surface
 
@@ -193,6 +194,38 @@ db.products.find({ $and: [
 Array queries target `tags`, `brand`, `categoryLabels`, and `variants.sku`.
 Prices are stored as `Decimal128` so range comparisons are numeric (ADR-0010).
 
+## 6c. Orders, checkout & security _(Phase 4)_
+
+**ACID checkout** (`POST /api/checkout`) runs as one transaction (ADR-0012):
+
+```
+reserve stock (sp_reserve_inventory, FOR UPDATE)   ─┐
+create order + order_items (price snapshot)         │  single @Transactional
+record payment (card fields encrypted)              │  → all-or-nothing
+mark cart CHECKED_OUT                               ─┘
+```
+
+Insufficient stock makes the stored procedure `RAISE`, rolling the whole
+transaction back (no order, no stock change) and recording a `CHECKOUT_FAILED`
+audit entry.
+
+**Payment encryption** (ADR-0013): card holder/number/expiry are encrypted at rest
+with AES-256-GCM via a JPA `AttributeConverter`; only `brand` + `last4` are clear,
+the CVV is never stored. The key comes from `APP_ENCRYPTION_KEY`.
+
+**SQL features** (ADR-0014): views `v_store_revenue` / `v_top_products` /
+`v_order_summary`, stored function `fn_store_sales_summary`, and a subquery
+("revenue above average"). Reporting endpoints are `ADMIN`/`STORE_MANAGER` only.
+
+### Phase 4 API surface
+
+| Method | Path | Auth |
+|---|---|---|
+| GET/POST/PUT/DELETE | `/api/cart`, `/api/cart/items[/{id}]` | authenticated |
+| POST | `/api/checkout` | authenticated |
+| GET | `/api/orders` · `/api/orders/{id}` | authenticated (own orders) |
+| GET | `/api/analytics/store-revenue[/above-average]` · `/top-products` · `/stores/{id}/summary` · `/orders-summary` | `ADMIN`/`STORE_MANAGER` |
+
 ## 7. Frontend architecture _(Phase 5)_
 
 App Router with route groups for storefront, auth, and dashboards. Server
@@ -224,3 +257,6 @@ and one-time bootstrap scripts, plus optional pgAdmin and mongo-express behind a
 | [0009](adr/0009-audit-logging.md) | Audit logging from Phase 2 |
 | [0010](adr/0010-mongodb-catalog-modeling.md) | MongoDB catalog modeling + Decimal128 |
 | [0011](adr/0011-event-driven-customer-sync.md) | Event-driven cross-DB customer sync |
+| [0012](adr/0012-acid-checkout-inventory-procedure.md) | ACID checkout + stored-procedure reservation |
+| [0013](adr/0013-column-encryption-payments.md) | Column-level encryption of payment data |
+| [0014](adr/0014-sql-reporting-views-functions.md) | SQL reporting: views, function, subqueries |
