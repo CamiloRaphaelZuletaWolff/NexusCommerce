@@ -4,12 +4,14 @@ import com.nexuscommerce.shared.error.DuplicateResourceException;
 import com.nexuscommerce.shared.error.ResourceNotFoundException;
 import com.nexuscommerce.users.domain.Role;
 import com.nexuscommerce.users.domain.User;
+import com.nexuscommerce.users.event.UserRegisteredEvent;
 import com.nexuscommerce.users.repository.RoleRepository;
 import com.nexuscommerce.users.repository.UserRepository;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public User register(String email, String fullName, String rawPassword, String roleName) {
@@ -34,7 +37,11 @@ public class UserService {
 
         User user = new User(normalizedEmail, passwordEncoder.encode(rawPassword), fullName);
         user.addRole(role);
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+
+        // Cross-DB sync trigger: a Mongo customer profile is created after commit (ADR-0003).
+        eventPublisher.publishEvent(new UserRegisteredEvent(saved.getId(), saved.getEmail(), saved.getFullName()));
+        return saved;
     }
 
     @Transactional(readOnly = true)

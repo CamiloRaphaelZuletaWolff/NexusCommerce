@@ -125,9 +125,8 @@ Security is a first-class concern, layered defense-in-depth:
 | `security`    | —          | Spring Security, JWT filter, RBAC, encryption |
 | `shared`      | —          | DTO base, error handling, audit, config |
 
-> **Phase 2 status:** `auth`, `users`, `stores`, `security`, `audit`, `shared`
-> implemented and verified. `catalog` is present but limited to MongoDB
-> connectivity + a read/write health probe (full catalog domain is Phase 3).
+> **Status:** `auth`, `users`, `stores`, `security`, `audit`, `shared` (Phase 2)
+> and `catalog` + `integration` (Phase 3) implemented and verified.
 
 ### Phase 2 API surface
 
@@ -141,6 +140,58 @@ Security is a first-class concern, layered defense-in-depth:
 | PUT | `/api/stores/{id}` | owner or `ADMIN` |
 | DELETE | `/api/stores/{id}` | `ADMIN` |
 | GET | `/api/catalog/health` · `/actuator/health` · `/swagger-ui.html` | public |
+
+### Phase 3 catalog API surface
+
+| Method | Path | Auth |
+|---|---|---|
+| GET | `/api/catalog/products` (search filters) · `/api/catalog/products/{id}` | public |
+| POST | `/api/catalog/products` | `STORE_MANAGER`/`ADMIN` (store owner) |
+| PUT · DELETE | `/api/catalog/products/{id}` | store owner or `ADMIN` |
+| GET | `/api/catalog/categories` · `/{slug}` · `/api/catalog/brands` · `/{slug}` | public |
+| POST | `/api/catalog/categories` · `/api/catalog/brands` | `ADMIN` |
+| GET | `/api/catalog/me/profile` | authenticated |
+
+## 6b. MongoDB catalog model & queries _(Phase 3)_
+
+**Documents** (database `nexuscatalog`):
+
+```jsonc
+// products
+{
+  "_id": "<uuid>",                 // product UUID
+  "storeId": "<uuid>",             // -> PostgreSQL store (UUID bridge)
+  "sku": "ELEC-UB14", "name": "Nexus UltraBook 14", "slug": "elec-ub14",
+  "price": NumberDecimal("1299.00"), "currency": "USD",
+  "categorySlug": "laptops",
+  "categoryLabels": ["electronics", "laptops"],   // array query target
+  "tags": ["laptop", "ultrabook", "portable"],     // array query target
+  "brand": "Nexies",
+  "variants": [ { "sku": "...-16-512", "attributes": {"ram":"16GB"}, "stock": 10 } ],
+  "attributes": { "ramGb": 16, "cpu": "M3", "screenInch": 14 },  // category-specific
+  "status": "ACTIVE"
+}
+// categories: { slug, name, attributes: [{key,label,type,required,unit}] }
+// brands:     { slug, name, description }
+// customer_profiles: { _id: <user UUID>, email, favoriteCategories, ... }  // synced from PG
+```
+
+**Search** (`ProductSearchRepositoryImpl`, via `MongoTemplate` + `Criteria`) builds
+the required operators. Example — "electronics products priced 200–1000, tagged
+`portable`, matching 'nexus'":
+
+```js
+db.products.find({ $and: [
+  { status: "ACTIVE" },
+  { price: { $gt: NumberDecimal("200"), $lt: NumberDecimal("1000") } },  // $gt / $lt
+  { tags: { $in: ["portable"] } },                                        // array $in
+  { categoryLabels: { $in: ["electronics"] } },                          // array $in
+  { $or: [ { name: /nexus/i }, { description: /nexus/i } ] }             // $or
+]})
+```
+
+Array queries target `tags`, `brand`, `categoryLabels`, and `variants.sku`.
+Prices are stored as `Decimal128` so range comparisons are numeric (ADR-0010).
 
 ## 7. Frontend architecture _(Phase 5)_
 
@@ -171,3 +222,5 @@ and one-time bootstrap scripts, plus optional pgAdmin and mongo-express behind a
 | [0007](adr/0007-uuid-generation-strategy.md) | UUID generation strategy (app-side v4) |
 | [0008](adr/0008-token-auth-strategy.md) | Access header + refresh HttpOnly cookie |
 | [0009](adr/0009-audit-logging.md) | Audit logging from Phase 2 |
+| [0010](adr/0010-mongodb-catalog-modeling.md) | MongoDB catalog modeling + Decimal128 |
+| [0011](adr/0011-event-driven-customer-sync.md) | Event-driven cross-DB customer sync |

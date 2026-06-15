@@ -15,3 +15,5 @@ never deleted (superseded ones are marked as such).
 | [0007](0007-uuid-generation-strategy.md) | UUID generation strategy (app-side v4) | Accepted |
 | [0008](0008-token-auth-strategy.md) | Access token in header, refresh token in HttpOnly cookie | Accepted |
 | [0009](0009-audit-logging.md) | Audit logging from Phase 2 | Accepted |
+| [0010](0010-mongodb-catalog-modeling.md) | MongoDB catalog modeling + Decimal128 price storage | Accepted |
+| [0011](0011-event-driven-customer-sync.md) | Event-driven cross-DB customer sync (UUID) | Accepted |

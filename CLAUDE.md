@@ -68,9 +68,9 @@ Tracked here so nothing is missed (✅ = done, ◑ = partial):
 - [ ] Stored procedures — *Phase 4*
 - [ ] Views — *Phase 4*
 - [ ] Subqueries — *Phase 4*
-- [ ] Mongo operators: `$gt`, `$lt`, `$and`, `$or` — *Phase 3*
-- [ ] Mongo array queries: tags, variants, brands, category labels — *Phase 3*
-- [ ] ◑ UUID cross-DB integration — *strategy done (Phase 2, ADR-0007); customer/store sync Phase 3*
+- [x] Mongo operators: `$gt`, `$lt`, `$and`, `$or` — *Phase 3* (product search via MongoTemplate)
+- [x] Mongo array queries: tags, variants, brands, category labels — *Phase 3* (`$in`)
+- [x] UUID cross-DB integration — *Phase 3* (products→stores by UUID; user→Mongo customer profile sync, ADR-0011)
 - [x] Audit logging (added requirement) — *Phase 2* (register/login±/refresh/logout/store-create)
 - [x] Stateless JWT + refresh-cookie rotation (added requirement) — *Phase 2* (ADR-0008)
 
@@ -153,7 +153,18 @@ npm run build
   image builds; app runs on `nexus-net` with all health checks UP; full
   register→login→refresh→create-store→audit flow exercised live with RBAC.
   ADRs 0006–0009. New: backend build/runtime is JDK 21 in Docker (ADR-0004/R1).
-- **Phases 3–8:** not started. See README roadmap.
+- **Phase 3 — Catalog + Multi-Store:** ✅ complete. MongoDB catalog (products,
+  categories with dynamic attribute schema, brands) + `customer_profiles`.
+  Product search via `MongoTemplate`/`Criteria` demonstrating `$gt`/`$lt`/`$and`/
+  `$or` and array `$in` (tags/brands/categoryLabels/variants). Prices stored as
+  Decimal128 (ADR-0010). Cross-DB: products reference stores by UUID with
+  ownership validation; user→Mongo customer-profile sync via domain event
+  (ADR-0011). RBAC-gated category/brand/product writes; PRODUCT_CREATED audit.
+  Verified live: all operator/array queries, product CRUD (manager 201 /
+  customer 403), customer sync, audit. 30 unit/ArchUnit tests pass (added catalog
+  search + product-service tests) plus a Testcontainers IT covering real-Mongo
+  product search. ADRs 0010–0011.
+- **Phases 4–8:** not started. See README roadmap.
 
 ### Dev demo credentials (dev profile only, never in prod)
 `admin@nexus.local`, `manager@nexus.local`, `customer@nexus.local` — all

@@ -39,7 +39,11 @@ public class SecurityConfig {
                                 "/api/auth/refresh",
                                 "/api/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/stores", "/api/stores/**").permitAll()
-                        .requestMatchers("/api/catalog/health").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/catalog/health",
+                                "/api/catalog/categories", "/api/catalog/categories/**",
+                                "/api/catalog/brands", "/api/catalog/brands/**",
+                                "/api/catalog/products", "/api/catalog/products/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated())

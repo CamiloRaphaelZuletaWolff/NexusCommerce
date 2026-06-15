@@ -11,7 +11,7 @@ import com.nexuscommerce.stores.domain.Store;
 import com.nexuscommerce.stores.domain.StoreStatus;
 import com.nexuscommerce.stores.mapper.StoreMapper;
 import com.nexuscommerce.stores.repository.StoreRepository;
-import java.util.Locale;
+import com.nexuscommerce.shared.util.Slugs;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +40,14 @@ public class StoreService {
     public StoreResponse getBySlug(String slug) {
         Store store = storeRepository.findBySlug(slug)
                 .orElseThrow(() -> ResourceNotFoundException.of("Store", slug));
+        return storeMapper.toResponse(store);
+    }
+
+    /** Cross-feature lookup (used by the catalog to validate a product's owning store by UUID). */
+    @Transactional(readOnly = true)
+    public StoreResponse getByIdOrThrow(UUID id) {
+        Store store = storeRepository.findById(id)
+                .orElseThrow(() -> ResourceNotFoundException.of("Store", id));
         return storeMapper.toResponse(store);
     }
 
@@ -82,19 +90,12 @@ public class StoreService {
     }
 
     private String uniqueSlug(String name) {
-        String base = slugify(name);
+        String base = Slugs.slugify(name);
         String candidate = base;
         int suffix = 2;
         while (storeRepository.existsBySlug(candidate)) {
             candidate = base + "-" + suffix++;
         }
         return candidate;
-    }
-
-    private static String slugify(String name) {
-        String slug = name.trim().toLowerCase(Locale.ROOT)
-                .replaceAll("[^a-z0-9]+", "-")
-                .replaceAll("(^-|-$)", "");
-        return slug.isEmpty() ? "store" : slug;
     }
 }

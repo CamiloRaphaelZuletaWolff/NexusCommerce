@@ -7,5 +7,6 @@ public enum AuditEventType {
     LOGIN_FAILURE,
     TOKEN_REFRESHED,
     LOGOUT,
-    STORE_CREATED
+    STORE_CREATED,
+    PRODUCT_CREATED
 }

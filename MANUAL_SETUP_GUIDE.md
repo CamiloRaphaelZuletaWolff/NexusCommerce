@@ -114,6 +114,30 @@ docker run --rm -v "$PWD/backend:/workspace" -v nexus-m2:/root/.m2 \
 - Health (db + mongo): `http://localhost:8080/actuator/health`
 - Catalog Mongo probe: `http://localhost:8080/api/catalog/health`
 
+### Catalog browsing & search (public; demo data seeded in dev)
+
+```bash
+# All products / categories / brands
+curl "http://localhost:8080/api/catalog/products"
+curl "http://localhost:8080/api/catalog/categories"
+curl "http://localhost:8080/api/catalog/brands"
+
+# Comparison operators: price range ($gt / $lt)
+curl "http://localhost:8080/api/catalog/products?minPrice=100&maxPrice=1000"
+
+# Array queries ($in): by tag, brand, category label
+curl "http://localhost:8080/api/catalog/products?tags=portable"
+curl "http://localhost:8080/api/catalog/products?brands=UrbanWear"
+curl "http://localhost:8080/api/catalog/products?categories=fashion"
+
+# Logical $or free-text + combined filters
+curl "http://localhost:8080/api/catalog/products?q=Nexus&minPrice=200&maxPrice=1000"
+```
+
+Managers/admins create products for stores they own (`POST /api/catalog/products`);
+admins manage categories/brands. A customer's MongoDB profile (synced from the
+PostgreSQL user by UUID) is at `GET /api/catalog/me/profile` (authenticated).
+
 ### Dev demo accounts (dev profile only — never use in production)
 
 | Email | Role | Password |
