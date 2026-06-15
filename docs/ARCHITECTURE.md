@@ -226,14 +226,53 @@ the CVV is never stored. The key comes from `APP_ENCRYPTION_KEY`.
 | GET | `/api/orders` · `/api/orders/{id}` | authenticated (own orders) |
 | GET | `/api/analytics/store-revenue[/above-average]` · `/top-products` · `/stores/{id}/summary` · `/orders-summary` | `ADMIN`/`STORE_MANAGER` |
 
-## 7. Frontend architecture _(Phase 5)_
+## 7. Frontend architecture _(Phase 5 ✅)_
 
-App Router with route groups for storefront, auth, and dashboards. Server
-Components fetch data; Client Components handle interactivity (cart drawer, forms,
-animations). Server state via TanStack Query; local UI state via Zustand; a single
-typed API client in `lib/`; Zod validation shared between forms and API
-boundaries. Design: polished, responsive, accessible, with loading skeletons and
-empty states throughout.
+Next.js 15 App Router + React 19 + TypeScript + Tailwind v4. Route groups:
+`(storefront)` (navbar/footer shell — home, stores, store pages, catalog, product,
+cart, checkout, orders), `(auth)` (login/register), and `dashboard` (role-gated
+manager/admin).
+
+**Rendering & data (ADR-0015).** Server Components by default; `"use client"` only
+for interactivity (cart drawer, forms, dashboard widgets, animations).
+`params`/`searchParams` are awaited (Next 15 async APIs). Two data lanes share one
+hand-mirrored contract (`types/api.ts`):
+
+- **Public reads** (catalog, stores) — Server Components via `lib/server-api.ts`
+  (`fetch` + revalidate). The data-driven listing routes (`/`, `/stores`,
+  `/catalog`) are `force-dynamic` so dashboard-created data shows immediately.
+- **Authenticated reads/writes** (cart, orders, checkout, analytics) — client via
+  `lib/api.ts` + TanStack Query, because the access token lives in browser memory.
+
+```
+Browser                          Next.js server                Spring Boot API
+  │  RSC page request  ─────────▶  Server Component                  │
+  │                                 └─ lib/server-api (public) ────▶ GET /catalog…
+  │  ◀──────── streamed HTML ───────                                 │
+  │  client island (TanStack Query)                                  │
+  │    └─ lib/api  ── Bearer + nexus_refresh cookie ───────────────▶ /cart /checkout…
+  │         ▲ 401 → one silent POST /auth/refresh → retry            │
+```
+
+**Auth.** Short-lived access token kept in memory (never `localStorage`), sent as
+`Authorization: Bearer`; session persists via the HttpOnly `nexus_refresh` cookie
+(`credentials: include`). A 401 triggers exactly one coalesced silent refresh +
+retry; `AuthProvider` bootstraps the session by attempting a refresh on mount.
+Mirrors the backend strategy (ADR-0008).
+
+**State.** TanStack Query = server state (cart/orders/analytics); Zustand =
+ephemeral UI state (cart drawer, mobile nav, toasts). RHF + Zod for forms.
+
+**Design system.** A deliberately non-templated identity (per `/frontend-design`):
+the **"nexus"** convergence signature (five store-hue nodes → one center), a
+Bricolage Grotesque / Plus Jakarta Sans / JetBrains Mono type trio, and
+**per-store-world hue theming** applied at runtime via `--accent*` CSS variables.
+UI primitives are hand-built on Radix + Tailwind. Products have no image URLs, so
+the catalog renders deterministic generated SVG art seeded per product.
+
+Verified: `next build` (16 routes), `tsc`, and eslint all clean; smoke-tested live
+against the backend (SSR renders real data, CORS allows the browser origin with
+credentials, login → `/auth/me` works).
 
 ## 8. Local infrastructure _(Phase 1 ✅)_
 
@@ -260,3 +299,4 @@ and one-time bootstrap scripts, plus optional pgAdmin and mongo-express behind a
 | [0012](adr/0012-acid-checkout-inventory-procedure.md) | ACID checkout + stored-procedure reservation |
 | [0013](adr/0013-column-encryption-payments.md) | Column-level encryption of payment data |
 | [0014](adr/0014-sql-reporting-views-functions.md) | SQL reporting: views, function, subqueries |
+| [0015](adr/0015-frontend-architecture.md) | Frontend architecture, data strategy & client auth |

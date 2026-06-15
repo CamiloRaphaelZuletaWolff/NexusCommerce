@@ -78,8 +78,8 @@ Full setup (backend + frontend) is in **[MANUAL_SETUP_GUIDE.md](MANUAL_SETUP_GUI
 ## 📦 Repository layout
 
 ```
-backend/   Spring Boot modular monolith        (Phase 2)
-frontend/  Next.js storefront + dashboards      (Phase 5)
+backend/   Spring Boot modular monolith        (Phases 2–4 ✅)
+frontend/  Next.js storefront + dashboards      (Phase 5 ✅)
 infra/     Docker Compose + DB bootstrap        (Phase 1 ✅)
 docs/      Architecture, ADRs, diagrams         (ongoing)
 ```
@@ -93,7 +93,7 @@ documented before the next begins.
 - [x] **Phase 2 — Backend core:** Spring Boot, JWT+RBAC security, auth (refresh-cookie rotation), 3NF persistence via Flyway, Mongo connectivity, audit logging
 - [x] **Phase 3 — Catalog + multi-store:** MongoDB catalog with category-specific dynamic attributes, operator/array search (`$gt`/`$lt`/`$and`/`$or`/`$in`), UUID product↔store linkage, and PostgreSQL↔MongoDB customer sync
 - [x] **Phase 4 — Orders + checkout + security:** cart, single-transaction **ACID checkout**, **AES-256-GCM** column encryption of payment data, inventory **stored procedure**, reporting **views + function + subqueries**, audit logging
-- [ ] **Phase 5 — Frontend:** storefront, catalog, cart, checkout, dashboards
+- [x] **Phase 5 — Frontend:** Next.js 15 storefront (nexus hero, store directory, catalog with server-side filters/search, product pages), auth (token-in-memory + refresh cookie), cart & **ACID checkout** UI, order history, and a role-gated manager/admin **dashboard** over the SQL analytics — distinctive design system with per-store-world theming
 - [ ] **Phase 6 — Integration polish:** end-to-end wiring, UX states
 - [ ] **Phase 7 — Testing + docs:** tests, diagrams, API docs, screenshots
 - [ ] **Phase 8 — Final hardening:** security & quality review

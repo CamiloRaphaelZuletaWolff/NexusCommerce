@@ -202,16 +202,43 @@ cd infra
 docker compose -f docker-compose.yml -f docker-compose.app.yml stop backend  # stop app, keep DBs
 ```
 
-## 5. Run the frontend (Phase 5 — coming later)
+## 5. Run the frontend (Phase 5 — available now)
+
+The frontend runs on your local Node (no Docker needed). Make sure the
+**databases and backend are running first** (sections 3–4) — the storefront
+renders live catalog/store data from the API on `:8080`, whose CORS already
+allows `http://localhost:3000` with credentials.
 
 ```bash
 cd frontend
-cp .env.example .env.local
+cp .env.example .env.local   # PowerShell: copy .env.example .env.local
 npm install
-npm run dev
+npm run dev                  # http://localhost:3000
 ```
 
-App will be available at `http://localhost:3000`.
+Production build:
+
+```bash
+npm run build
+npm start                    # serves the optimized build on :3000
+```
+
+### What to try
+
+1. **Browse** — the home page (the "nexus" hero + store-worlds), `/stores`, and
+   `/catalog`. Use the catalog filters (search, price range, category, brand,
+   store) — they map to the Mongo operator/array queries from Phase 3.
+2. **Sign in** — go to `/login` and click a **demo account** chip (Admin /
+   Manager / Customer; password `Password123!`), or register a new account.
+3. **Shop** — open a product, **Add to cart**, open the cart drawer, then
+   **Checkout** (use the *"Use test card"* button — `4111 1111 1111 1111`). The
+   order confirmation shows the encrypted-at-rest payment (brand + last 4 only).
+4. **Dashboard** — as Manager/Admin, open **Dashboard** from the account menu:
+   analytics over the SQL views / stored function / subquery, plus create a store
+   or product. (Customers are correctly blocked from `/dashboard`.)
+
+> Env vars: `NEXT_PUBLIC_API_BASE_URL` is used by the browser; `API_INTERNAL_BASE_URL`
+> by Server Components. Both default to `http://localhost:8080/api`.
 
 ## 6. Troubleshooting
 

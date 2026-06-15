@@ -89,8 +89,11 @@ The project asked for `/frontend-design`, `/security-best-practices`,
 
 - **`java-springboot`** — loaded; applied to backend structure & conventions
   (Phase 2+).
-- **`next-best-practices`** + **`frontend-design`** — to be loaded in Phase 5/6
-  (frontend implementation).
+- **`next-best-practices`** + **`frontend-design`** — loaded and applied in
+  Phase 5: RSC-by-default with a thin client boundary, async `params`/
+  `searchParams`, the typed-client/no-scattered-fetch rule, and a distinctive,
+  non-templated visual identity ("the nexus" convergence motif + per-store-world
+  hues). See ADR-0015.
 - **`security-best-practices`** — to be loaded in Phase 4 (security-heavy work).
   Caveat: this skill targets python/js/ts/go, so for Java it provides general
   guidance only; Spring-specific security follows `java-springboot` + OWASP.
@@ -114,6 +117,19 @@ The project asked for `/frontend-design`, `/security-best-practices`,
   templates are committed.
 - **A6 — Admin UIs (pgAdmin, mongo-express)** run behind a Docker Compose
   `tools` profile so the default `up` stays lightweight.
+- **A7 — Frontend stack specifics (Phase 5):** TailwindCSS **v4** (what
+  `create-next-app` ships today) configured via CSS `@theme`. We hand-build the
+  UI primitives on **Radix** + Tailwind rather than pulling shadcn/ui's default
+  components, to keep a distinctive, non-templated identity (the stack doc still
+  lists shadcn/ui; this is the documented substitution, same Radix+Tailwind
+  foundation). See ADR-0015.
+- **A8 — No product images in the API:** the catalog API exposes no image URLs,
+  so the frontend renders deterministic generative SVG art per product (seeded by
+  product id, themed to the store-world hue) instead of placeholder photos.
+- **A9 — Client auth storage:** the access token is held in memory only (never
+  `localStorage`); the browser persists the session through the HttpOnly
+  `nexus_refresh` cookie, and the client performs one silent refresh + retry on a
+  401. See ADR-0015.
 
 ## 9. Environment notes (this machine)
 
@@ -174,7 +190,20 @@ npm run build
   fixed self-invocation bug). Migrations V6–V10. ADRs 0012–0014. 36 unit/ArchUnit
   tests pass; verified live: checkout decrements stock, card encrypted at rest,
   insufficient stock → 400 + rollback, views/function/subquery return correct data.
-- **Phases 5–8:** not started. See README roadmap.
+- **Phase 5 — Frontend:** ✅ complete. Next.js 15 (App Router) + React 19 +
+  TypeScript + Tailwind v4. Storefront (nexus hero, store directory, store pages,
+  catalog with server-side filters/search/pagination, product detail), auth
+  (login/register with access-token-in-memory + silent refresh via the HttpOnly
+  cookie), cart drawer + cart page, ACID checkout flow, order confirmation +
+  history, and a role-gated manager/admin dashboard (analytics over the SQL
+  views/function/subquery, plus store & product creation). RSC-by-default with a
+  thin client boundary; one typed API client; TanStack Query (server state) +
+  Zustand (UI state) + RHF/Zod (forms). Distinctive design system: "the nexus"
+  convergence signature + per-store-world hue theming via runtime CSS vars.
+  Verified: `next build` (16 routes) + `tsc` + eslint clean; smoke-tested live
+  against the running backend — SSR renders real catalog/store data, CORS allows
+  the browser origin with credentials, and login→`/me` works. ADR-0015.
+- **Phases 6–8:** not started. See README roadmap.
 
 ### Dev demo credentials (dev profile only, never in prod)
 `admin@nexus.local`, `manager@nexus.local`, `customer@nexus.local` — all
@@ -188,6 +217,18 @@ docker run --rm -v "$PWD/backend:/workspace" -v nexus-m2:/root/.m2 \
 # Run full stack (DBs + backend) from infra/:
 docker compose -f docker-compose.yml -f docker-compose.app.yml up -d --build
 ```
+
+### Build / run the frontend (Phase 5)
+```bash
+cd frontend
+cp .env.example .env.local   # PowerShell: copy .env.example .env.local
+npm install
+npm run dev                  # http://localhost:3000 (backend must be on :8080)
+npm run build && npm start   # production build + serve
+```
+Tooling note: frontend runs on the local Node (npm 10.9); the JDK-21-in-Docker
+rule is backend-only. Data-driven listing pages (`/`, `/stores`, `/catalog`) are
+server-rendered dynamically so they always reflect current backend data.
 
 ## 12. Service ports (local)
 
