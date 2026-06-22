@@ -1,0 +1,61 @@
+# NexusCommerce — Render Blueprint (Infrastructure-as-Code)
+#
+# Deploys the Spring Boot backend (Docker) + a managed PostgreSQL database.
+# MongoDB is NOT a managed Render resource: provide an external MongoDB Atlas (M0)
+# connection string via the SPRING_DATA_MONGODB_URI secret (sync: false) in the
+# Dashboard after applying this Blueprint.
+#
+# Apply: https://dashboard.render.com/blueprint/new?repo=https://github.com/CamiloRaphaelZuletaWolff/NexusCommerce
+
+databases:
+  - name: nexus-postgres
+    databaseName: nexuscommerce
+    plan: free
+    region: oregon
+
+services:
+  - type: web
+    name: nexuscommerce-backend
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+    envVars:
+      # Demo profile: seeds roles, demo users (admin/manager/customer) + catalog.
+      - key: SPRING_PROFILES_ACTIVE
+        value: dev
+
+      # PostgreSQL — discrete properties from the managed DB; application.yml
+      # composes jdbc:postgresql://$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB.
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: nexus-postgres
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: nexus-postgres
+          property: port
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: nexus-postgres
+          property: database
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: nexus-postgres
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: nexus-postgres
+          property: password
+
+      # MongoDB Atlas (M0) — paste the SRV connection string for database
+      # `nexuscatalog` here in the Dashboard (kept out of source).
+      - key: SPRING_DATA_MONGODB_URI
+        sync: false
+
+      # Refresh cookie is served over HTTPS on Render.
+      - key: AUTH_COOKIE_SECURE
+        value: "true"

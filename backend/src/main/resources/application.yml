@@ -5,7 +5,9 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/nexuscommerce}
+    # SPRING_DATASOURCE_URL wins if set; otherwise compose from discrete host/port/db
+    # (managed Postgres on Render exposes these as separate Blueprint properties).
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:nexuscommerce}}
     username: ${SPRING_DATASOURCE_USERNAME:nexus}
     password: ${SPRING_DATASOURCE_PASSWORD:nexus_local_pw}
 
@@ -30,7 +32,8 @@ spring:
       auto-index-creation: true
 
 server:
-  port: ${SERVER_PORT:8080}
+  # Render injects PORT; fall back to SERVER_PORT, then 8080 for local/dev.
+  port: ${PORT:${SERVER_PORT:8080}}
 
 management:
   endpoints:
