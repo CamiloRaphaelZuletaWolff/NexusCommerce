@@ -94,8 +94,8 @@ documented before the next begins.
 - [x] **Phase 3 — Catalog + multi-store:** MongoDB catalog with category-specific dynamic attributes, operator/array search (`$gt`/`$lt`/`$and`/`$or`/`$in`), UUID product↔store linkage, and PostgreSQL↔MongoDB customer sync
 - [x] **Phase 4 — Orders + checkout + security:** cart, single-transaction **ACID checkout**, **AES-256-GCM** column encryption of payment data, inventory **stored procedure**, reporting **views + function + subqueries**, audit logging
 - [x] **Phase 5 — Frontend:** Next.js 15 storefront (nexus hero, store directory, catalog with server-side filters/search, product pages), auth (token-in-memory + refresh cookie), cart & **ACID checkout** UI, order history, and a role-gated manager/admin **dashboard** over the SQL analytics — distinctive design system with per-store-world theming
-- [ ] **Phase 6 — Integration polish:** end-to-end wiring, UX states
-- [ ] **Phase 7 — Testing + docs:** tests, diagrams, API docs, screenshots
+- [x] **Phase 6 — Integration polish:** bidirectional PostgreSQL↔MongoDB customer profile (a customer **account** page that visualizes the shared-UUID bridge, editable favorites written back to Mongo, and recently-viewed recorded live while browsing), plus end-to-end **UX states** — route error boundaries, streaming loading skeletons, and consistent empty/error panels
+- [x] **Phase 7 — Testing + docs:** backend service tests (49 unit/ArchUnit/Testcontainers, incl. profile + cart), a frontend test suite (Vitest + Testing Library), Mermaid **diagrams** (ERD, Mongo schema, **data-flow**, sequences), exported **OpenAPI** spec + API reference, and a screenshot capture guide
 - [ ] **Phase 8 — Final hardening:** security & quality review
 
 ## 📄 License

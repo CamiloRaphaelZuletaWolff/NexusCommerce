@@ -5,6 +5,7 @@ import { ChevronRight, Star } from "lucide-react";
 import { ProductArt } from "@/components/product-art";
 import { ProductCard } from "@/components/catalog/product-card";
 import { AddToCartPanel } from "@/components/catalog/add-to-cart-panel";
+import { RecordRecentlyViewed } from "@/components/catalog/record-recently-viewed";
 import { Badge } from "@/components/ui/badge";
 import { serverApi } from "@/lib/server-api";
 import { accentVars, hueFor } from "@/lib/store-theme";
@@ -59,6 +60,7 @@ export default async function ProductPage({
 
   return (
     <div style={accentVars(store?.storeType)} className="container-page py-8">
+      <RecordRecentlyViewed productId={product.id} />
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-1.5 text-sm text-ink-faint" aria-label="Breadcrumb">
         <Link href="/catalog" className="transition-colors hover:text-ink">Catalog</Link>

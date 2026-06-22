@@ -21,3 +21,4 @@ never deleted (superseded ones are marked as such).
 | [0013](0013-column-encryption-payments.md) | Column-level encryption of payment data (AES-256-GCM) | Accepted |
 | [0014](0014-sql-reporting-views-functions.md) | SQL reporting: views, function, subqueries | Accepted |
 | [0015](0015-frontend-architecture.md) | Frontend architecture, data strategy & client auth | Accepted |
+| [0016](0016-bidirectional-profile-and-ux-states.md) | Bidirectional customer profile & frontend UX states | Accepted |

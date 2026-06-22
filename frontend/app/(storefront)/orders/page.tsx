@@ -6,6 +6,8 @@ import { ChevronRight, Package } from "lucide-react";
 import { RequireAuth } from "@/components/auth/require-auth";
 import { OrderStatusBadge } from "@/components/orders/status-badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/auth-provider";
 import { api } from "@/lib/api";
@@ -21,7 +23,7 @@ export default function OrdersPage() {
 
 function OrdersList() {
   const { status } = useAuth();
-  const { data: orders, isLoading } = useQuery({
+  const { data: orders, isLoading, isError, refetch } = useQuery({
     queryKey: ["orders"],
     queryFn: api.orders.list,
     enabled: status === "authenticated",
@@ -37,17 +39,24 @@ function OrdersList() {
             <Skeleton key={i} className="h-24 w-full rounded-xl" />
           ))}
         </div>
+      ) : isError ? (
+        <ErrorState
+          className="mt-8"
+          title="Couldn’t load your orders"
+          onRetry={() => refetch()}
+        />
       ) : !orders || orders.length === 0 ? (
-        <div className="mt-10 flex flex-col items-center justify-center rounded-2xl border border-dashed border-line-strong bg-surface py-20 text-center">
-          <div className="grid size-16 place-items-center rounded-full bg-nexus-tint">
-            <Package className="size-7 text-nexus" />
-          </div>
-          <h2 className="mt-5 text-xl font-bold">No orders yet</h2>
-          <p className="mt-1 max-w-sm text-ink-soft">When you place an order, it’ll show up here.</p>
-          <Button asChild variant="accent" className="mt-6">
-            <Link href="/catalog">Start shopping</Link>
-          </Button>
-        </div>
+        <EmptyState
+          className="mt-10"
+          icon={Package}
+          title="No orders yet"
+          description="When you place an order, it’ll show up here."
+          action={
+            <Button asChild variant="accent">
+              <Link href="/catalog">Start shopping</Link>
+            </Button>
+          }
+        />
       ) : (
         <div className="mt-8 space-y-3">
           {orders.map((order) => (

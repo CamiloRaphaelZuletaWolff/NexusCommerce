@@ -1,9 +1,3 @@
-# Full-stack overlay — adds the backend service on top of the database infra.
-#
-# Usage (from infra/):
-#   docker compose -f docker-compose.yml -f docker-compose.app.yml up -d --build
-#
-# The backend reaches the databases by service name over the shared nexus-net.
 
 name: nexuscommerce
 

@@ -50,6 +50,9 @@ export function UserMenu() {
             </div>
           </div>
           <Dropdown.Separator className="my-1 h-px bg-line" />
+          <MenuLink href="/account" icon={User}>
+            My account
+          </MenuLink>
           <MenuLink href="/orders" icon={Package}>
             My orders
           </MenuLink>

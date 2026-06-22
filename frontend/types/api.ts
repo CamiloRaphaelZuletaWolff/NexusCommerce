@@ -65,6 +65,12 @@ export interface CustomerProfileResponse {
   updatedAt: string;
 }
 
+/** PATCH /catalog/me/profile — a provided list replaces that set; omit to leave unchanged. */
+export interface UpdateCustomerProfileRequest {
+  favoriteCategories?: string[];
+  favoriteBrands?: string[];
+}
+
 /* ---- Catalog ---- */
 export interface VariantDto {
   sku: string;

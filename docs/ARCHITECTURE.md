@@ -151,7 +151,8 @@ Security is a first-class concern, layered defense-in-depth:
 | PUT · DELETE | `/api/catalog/products/{id}` | store owner or `ADMIN` |
 | GET | `/api/catalog/categories` · `/{slug}` · `/api/catalog/brands` · `/{slug}` | public |
 | POST | `/api/catalog/categories` · `/api/catalog/brands` | `ADMIN` |
-| GET | `/api/catalog/me/profile` | authenticated |
+| GET · PATCH | `/api/catalog/me/profile` (read · update favorites) | authenticated |
+| POST | `/api/catalog/me/recently-viewed/{productId}` | authenticated |
 
 ## 6b. MongoDB catalog model & queries _(Phase 3)_
 
@@ -273,6 +274,46 @@ the catalog renders deterministic generated SVG art seeded per product.
 Verified: `next build` (16 routes), `tsc`, and eslint all clean; smoke-tested live
 against the backend (SSR renders real data, CORS allows the browser origin with
 credentials, login → `/auth/me` works).
+
+### 7b. Integration polish & UX states _(Phase 6 ✅)_
+
+The cross-database bridge became **bidirectional and visible** (ADR-0016). New
+write endpoints — `PATCH /api/catalog/me/profile` (favorite categories/brands) and
+`POST /api/catalog/me/recently-viewed/{productId}` (de-duped, capped) — write back to
+the MongoDB `customer_profiles` document keyed by the PostgreSQL user UUID. Profile
+access is **get-or-create**, so users predating the register-time sync (ADR-0011)
+still get a profile. A customer **`/account`** page makes the bridge tangible: it
+shows the one UUID that is both the PostgreSQL `users` primary key and the Mongo
+document `_id`, lets the customer edit favorites (write-back), and surfaces
+"Recently viewed", recorded fire-and-forget from the product page. No new cross-DB
+foreign key — the UUID-reference contract (ADR-0003) holds.
+
+UX states follow Next.js conventions: a root `global-error.tsx`, segment `error.tsx`
+for `(storefront)` and `dashboard` (the shell stays, with a retry), route-level
+`loading.tsx` skeletons for the dynamic routes, and reusable `<EmptyState>` /
+`<ErrorState>` so emptiness and failure read consistently in the interface voice.
+Verified: backend `mvn test` green (JDK-21 Docker), `next build` (17 routes) + `tsc`
++ eslint clean, and a live smoke test confirming favorites + recently-viewed persist
+to MongoDB.
+
+## 7c. Testing & documentation _(Phase 7 ✅)_
+
+**Tests.** Backend: 49 tests run under JDK-21 in Docker — JUnit 5 + Mockito unit
+tests per service (auth, stores, products, checkout, cart, customer profile, crypto,
+token rotation), `ArchitectureTest` (ArchUnit module-boundary rules), and
+`BackendIntegrationIT` (Testcontainers against real PostgreSQL + MongoDB). Frontend:
+Vitest + Testing Library + jsdom (`npm test`) covering the typed client's
+401→refresh→retry and query building, the store-theme helpers, formatting utils, and
+the `FavoritesEditor` interaction. Frontend tests run on local Node; the
+JDK-21-in-Docker rule is backend-only.
+
+**Docs.** Text-first **Mermaid** diagrams in [`docs/diagrams/`](diagrams/) — the
+relational [ERD](diagrams/erd.md), the [MongoDB schema](diagrams/mongo-schema.md), the
+[data-flow diagram](diagrams/data-flow.md), and [sequence diagrams](diagrams/sequences.md)
+(login/refresh, ACID checkout, cross-DB sync). The REST surface is documented by the
+live Swagger UI plus a committed OpenAPI 3.1 spec and reference in
+[`docs/api/`](api/). A [screenshot capture guide](diagrams/screenshots/README.md)
+lists the storefront/dashboard shots to grab against the running stack.
 
 ## 8. Local infrastructure _(Phase 1 ✅)_
 

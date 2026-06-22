@@ -1,13 +1,18 @@
 # Diagrams
 
-Visual documentation for NexusCommerce. Diagrams are added as the corresponding
-systems are built:
+Visual documentation for NexusCommerce. Diagrams are committed as text-first
+**Mermaid** (renders on GitHub and in VS Code), so they version with the code.
 
-- **ERD** (PostgreSQL relational model, 3NF) — Phase 2 / Phase 4
-- **MongoDB catalog schema examples** — Phase 3
-- **Data-flow diagram** (request → service → datastores, UUID bridge) — Phase 4
-- **Sequence diagrams** (auth flow, ACID checkout) — Phase 4
-- **Screenshots** of the storefront and dashboards — Phase 7
+| Diagram | File | Covers |
+|---|---|---|
+| PostgreSQL ERD (3NF) | [erd.md](erd.md) | relational model, junction table, snapshot columns, UUID refs to Mongo |
+| MongoDB catalog schema | [mongo-schema.md](mongo-schema.md) | document shapes, dynamic attributes, the `$gt`/`$lt`/`$and`/`$or`/`$in` queries |
+| Data-flow diagram | [data-flow.md](data-flow.md) | request flow, two data lanes, the UUID bridge (assignment deliverable) |
+| Sequence diagrams | [sequences.md](sequences.md) | login + silent refresh, ACID checkout, cross-DB customer sync |
+| Screenshots | [screenshots/README.md](screenshots/README.md) | storefront + dashboard captures (manual capture guide) |
 
-Source diagrams should be committed in an editable text format where possible
-(e.g. Mermaid `.mmd` or PlantUML) alongside exported images.
+## Viewing
+
+GitHub renders the Mermaid blocks inline. In VS Code, use a Mermaid preview
+extension, or paste a block into <https://mermaid.live>. An exported PNG/SVG can be
+dropped next to each `.md` if a static image is needed for a report.

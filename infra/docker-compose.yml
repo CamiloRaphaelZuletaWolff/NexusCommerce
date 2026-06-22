@@ -1,20 +1,7 @@
-# NexusCommerce — local development infrastructure
-#
-# Usage:
-#   Databases only (default):   docker compose up -d
-#   Databases + admin UIs:      docker compose --profile tools up -d
-#   Tear down (keep data):      docker compose down
-#   Tear down (wipe data):      docker compose down -v
-#
-# All credentials come from ./.env (copy from ./.env.example first).
 
 name: nexuscommerce
 
 services:
-  # ----------------------------------------------------------------------------
-  # PostgreSQL — transactional / relational store
-  # (users, roles, stores, orders, payments, invoices, audit_logs, ...)
-  # ----------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
     container_name: nexus-postgres
@@ -27,7 +14,6 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Bootstrap SQL runs once, only when the data volume is empty.
       - ./db/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -36,11 +22,6 @@ services:
       retries: 5
       start_period: 10s
     networks: [nexus-net]
-
-  # ----------------------------------------------------------------------------
-  # MongoDB — flexible product catalog
-  # (products, categories, category attributes, tags, variants, brands, ...)
-  # ----------------------------------------------------------------------------
   mongo:
     image: mongo:7
     container_name: nexus-mongo
@@ -49,14 +30,12 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_DB}
-      # Consumed by the init script to create a least-privilege app user.
       MONGO_APP_USER: ${MONGO_APP_USER}
       MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD}
     ports:
       - "${MONGO_PORT:-27017}:27017"
     volumes:
       - mongo_data:/data/db
-      # Bootstrap JS runs once, only when the data volume is empty.
       - ./db/mongo/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
@@ -66,9 +45,6 @@ services:
       start_period: 15s
     networks: [nexus-net]
 
-  # ----------------------------------------------------------------------------
-  # pgAdmin — optional Postgres web UI (profile: tools)
-  # ----------------------------------------------------------------------------
   pgadmin:
     image: dpage/pgadmin4:8
     container_name: nexus-pgadmin
@@ -85,9 +61,6 @@ services:
         condition: service_healthy
     networks: [nexus-net]
 
-  # ----------------------------------------------------------------------------
-  # mongo-express — optional MongoDB web UI (profile: tools)
-  # ----------------------------------------------------------------------------
   mongo-express:
     image: mongo-express:1.0.2
     container_name: nexus-mongo-express

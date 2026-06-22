@@ -25,6 +25,7 @@ import type {
   StoreRevenueResponse,
   StoreSalesSummaryResponse,
   TopProductResponse,
+  UpdateCustomerProfileRequest,
   UserResponse,
 } from "@/types/api";
 
@@ -179,6 +180,10 @@ export const api = {
     categories: () => request<CategoryResponse[]>("/catalog/categories"),
     brands: () => request<BrandResponse[]>("/catalog/brands"),
     myProfile: () => request<CustomerProfileResponse>("/catalog/me/profile"),
+    updateProfile: (data: UpdateCustomerProfileRequest) =>
+      request<CustomerProfileResponse>("/catalog/me/profile", { method: "PATCH", body: data }),
+    recordRecentlyViewed: (productId: string) =>
+      request<CustomerProfileResponse>(`/catalog/me/recently-viewed/${productId}`, { method: "POST" }),
   },
 
   stores: {

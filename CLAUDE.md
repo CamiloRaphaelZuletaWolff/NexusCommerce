@@ -203,7 +203,33 @@ npm run build
   Verified: `next build` (16 routes) + `tsc` + eslint clean; smoke-tested live
   against the running backend — SSR renders real catalog/store data, CORS allows
   the browser origin with credentials, and login→`/me` works. ADR-0015.
-- **Phases 6–8:** not started. See README roadmap.
+- **Phase 6 — Integration polish:** ✅ complete. Made the PostgreSQL↔MongoDB
+  customer profile **bidirectional**: new `PATCH /api/catalog/me/profile`
+  (favorite categories/brands) + `POST /api/catalog/me/recently-viewed/{productId}`
+  (de-duped, capped at 12), both `isAuthenticated`, writing to `customer_profiles`
+  keyed by the PostgreSQL user UUID. Profile access is now **get-or-create**, so
+  users predating the register-time sync (ADR-0011) still get a profile. New
+  customer **`/account`** page: a UUID-bridge visualization (same id as PG
+  `users.id` and Mongo `_id`), editable favorites (write-back), and recently-viewed
+  populated live from the product page (fire-and-forget). **UX states:**
+  `global-error.tsx`, segment `error.tsx` (storefront + dashboard), route
+  `loading.tsx` skeletons for the dynamic routes, and reusable `<EmptyState>` /
+  `<ErrorState>`. No new cross-DB FK (ADR-0003 preserved). ADR-0016. Verified:
+  backend `mvn test` green in JDK-21 Docker; `next build` (17 routes) + `tsc` +
+  eslint clean; smoke-tested live (favorites + recently-viewed persist to Mongo).
+- **Phase 7 — Testing + docs:** ✅ complete. Backend: added
+  `CustomerProfileServiceTest` (get-or-create, favorites PATCH semantics,
+  recently-viewed de-dup/cap/404) + `CartServiceTest` → **49** unit/ArchUnit/
+  Testcontainers tests green in JDK-21 Docker. Frontend: introduced a test suite —
+  **Vitest + Testing Library + jsdom** (`npm test`) covering `lib/utils`,
+  `lib/store-theme`, `lib/api` (401→refresh→retry + query building), and the
+  `FavoritesEditor` (toggle/dirty/save); 16 tests green, `tsc`/eslint/`next build`
+  still clean. Docs: Mermaid diagrams in `docs/diagrams/` (ERD, Mongo schema,
+  **data-flow**, sequences) + index; exported OpenAPI spec `docs/api/openapi.json`
+  (28 paths) + `docs/api/README.md` reference; screenshot capture guide in
+  `docs/diagrams/screenshots/`. Frontend testing runs on local Node (the
+  JDK-21-in-Docker rule remains backend-only).
+- **Phase 8:** not started. See README roadmap.
 
 ### Dev demo credentials (dev profile only, never in prod)
 `admin@nexus.local`, `manager@nexus.local`, `customer@nexus.local` — all
@@ -240,3 +266,13 @@ server-rendered dynamically so they always reflect current backend data.
 | MongoDB        | 27017 |
 | pgAdmin        | 5050  |
 | mongo-express  | 8081  |
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
