@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
  * after the catalog seeder so it covers both fresh and pre-existing catalogs.
  */
 @Component
-@Profile("dev")
+@Profile({"dev", "demo"})
 @Order(3)
 @RequiredArgsConstructor
 public class InventoryDevSeeder implements ApplicationRunner {

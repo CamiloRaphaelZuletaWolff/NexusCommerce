@@ -17,4 +17,8 @@ RUN groupadd --system nexus && useradd --system --gid nexus --home /app nexus
 COPY --from=build /workspace/target/nexuscommerce-backend.jar app.jar
 USER nexus
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/app.jar"]
+# Default JVM flags live in JAVA_TOOL_OPTIONS (not on the java command line) so a
+# platform can override them without rebuilding: render.yaml sets a tuned value for
+# the 512 MB free instance. Command-line flags would silently win over the env var.
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

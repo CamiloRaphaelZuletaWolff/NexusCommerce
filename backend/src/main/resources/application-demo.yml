@@ -1,0 +1,56 @@
+# Public demo profile (Render free + Neon Postgres + MongoDB Atlas M0). See DEPLOY.md.
+#
+# Same demo seed data as `dev` (the seeders in com.nexuscommerce.bootstrap run under
+# {"dev","demo"}), but with NO fallback secrets or local defaults: every placeholder
+# below defaults to EMPTY, so a missing env var aborts startup with a Spring Boot
+# "APPLICATION FAILED TO START" report (e.g. "app.jwt.secret ... must not be blank",
+# "'url' attribute is not specified") instead of silently booting with a dev key or
+# a localhost database. (A default-less ${VAR} would NOT fail: Boot keeps the literal
+# "${VAR}" text, which then breaks later with a far less obvious error.)
+
+spring:
+  datasource:
+    # Neon DIRECT (non-pooler) endpoint, e.g.
+    # jdbc:postgresql://ep-xxx.us-west-2.aws.neon.tech/neondb?sslmode=require
+    url: ${SPRING_DATASOURCE_URL:}
+    username: ${SPRING_DATASOURCE_USERNAME:}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    hikari:
+      # Default is 10. 0.1 vCPU / 512 MB can't use more, and each connection costs heap.
+      maximum-pool-size: 5
+  data:
+    mongodb:
+      # Atlas SRV string ending in /nexuscatalog
+      uri: ${SPRING_DATA_MONGODB_URI:}
+
+server:
+  tomcat:
+    threads:
+      # Default is 200; 0.1 vCPU can't serve that many concurrently and each thread has a stack.
+      max: 20
+
+logging:
+  level:
+    com.nexuscommerce: INFO
+
+management:
+  endpoint:
+    health:
+      # Publicly reachable (Render health check + frontend cold-start banner):
+      # report UP/DOWN only, not component details (DB/Mongo versions, disk).
+      show-details: never
+
+app:
+  jwt:
+    # Base64 of >= 32 random bytes (JwtService rejects anything shorter).
+    secret: ${JWT_SECRET:}
+  encryption:
+    # Base64 of EXACTLY 16, 24 or 32 random bytes (AES-128/192/256; CryptoSupport).
+    key: ${APP_ENCRYPTION_KEY:}
+  auth:
+    cookie:
+      # Served over HTTPS only (Render / Vercel). Overridable, but default to secure.
+      secure: ${AUTH_COOKIE_SECURE:true}
+  cors:
+    # Exact frontend origin(s), comma-separated, no trailing slash, e.g. https://nexuscommerce.vercel.app
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:}

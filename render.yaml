@@ -1,61 +1,94 @@
-# NexusCommerce — Render Blueprint (Infrastructure-as-Code)
+# NexusCommerce — Render Blueprint (Infrastructure-as-Code). Full walkthrough: DEPLOY.md
 #
-# Deploys the Spring Boot backend (Docker) + a managed PostgreSQL database.
-# MongoDB is NOT a managed Render resource: provide an external MongoDB Atlas (M0)
-# connection string via the SPRING_DATA_MONGODB_URI secret (sync: false) in the
-# Dashboard after applying this Blueprint.
+# One FREE Docker web service for the Spring Boot backend. Nothing else is created
+# on Render:
+#   - PostgreSQL -> Neon free tier (external). Render's free Postgres is deleted
+#     30 days after creation; Neon's free tier does not expire, and autosuspends
+#     when idle instead.
+#   - MongoDB    -> MongoDB Atlas M0 (external, free forever).
+#   - Frontend   -> Vercel Hobby. It proxies /api/* to this service (next.config.ts)
+#     so the refresh cookie stays first-party on the Vercel domain.
 #
-# Apply: https://dashboard.render.com/blueprint/new?repo=https://github.com/CamiloRaphaelZuletaWolff/NexusCommerce
-
-databases:
-  - name: nexus-postgres
-    databaseName: nexuscommerce
-    plan: free
-    region: oregon
+# Free-plan facts that shape this file: 512 MB RAM / 0.1 vCPU, spins down after
+# 15 min without traffic (2-3 min cold start for the JVM), 750 free instance-hours per month
+# shared by every free service in the workspace.
+#
+# `sync: false` = secret you type in the Dashboard when applying the Blueprint
+# (never committed). Apply:
+#   https://dashboard.render.com/blueprint/new?repo=https://github.com/CamiloRaphaelZuletaWolff/NexusCommerce
 
 services:
   - type: web
     name: nexuscommerce-backend
     runtime: docker
     plan: free
-    region: oregon
+    region: oregon            # same AWS region (us-west-2) as Neon + Atlas -> low DB latency
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     healthCheckPath: /actuator/health
-    autoDeploy: true
+    autoDeploy: true          # redeploys on every push to the default branch
     envVars:
-      # Demo profile: seeds roles, demo users (admin/manager/customer) + catalog.
+      # `demo` = demo seed data (users, stores, catalog, stock) + NO fallback secrets:
+      # startup fails fast if any required variable below is missing.
       - key: SPRING_PROFILES_ACTIVE
-        value: dev
+        value: demo
 
-      # PostgreSQL — discrete properties from the managed DB; application.yml
-      # composes jdbc:postgresql://$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB.
-      - key: POSTGRES_HOST
-        fromDatabase:
-          name: nexus-postgres
-          property: host
-      - key: POSTGRES_PORT
-        fromDatabase:
-          name: nexus-postgres
-          property: port
-      - key: POSTGRES_DB
-        fromDatabase:
-          name: nexus-postgres
-          property: database
+      # ---- PostgreSQL (Neon) ----
+      # Use the DIRECT endpoint (host WITHOUT "-pooler"): Flyway takes a session-level
+      # advisory lock, which PgBouncer transaction pooling does not support.
+      # Format: jdbc:postgresql://ep-xxx.us-west-2.aws.neon.tech/neondb?sslmode=require
+      - key: SPRING_DATASOURCE_URL
+        sync: false
       - key: SPRING_DATASOURCE_USERNAME
-        fromDatabase:
-          name: nexus-postgres
-          property: user
+        sync: false
       - key: SPRING_DATASOURCE_PASSWORD
-        fromDatabase:
-          name: nexus-postgres
-          property: password
+        sync: false
 
-      # MongoDB Atlas (M0) — paste the SRV connection string for database
-      # `nexuscatalog` here in the Dashboard (kept out of source).
+      # ---- MongoDB (Atlas M0) ----
+      # mongodb+srv://<user>:<password>@<cluster>.mongodb.net/nexuscatalog?retryWrites=true&w=majority
       - key: SPRING_DATA_MONGODB_URI
         sync: false
 
-      # Refresh cookie is served over HTTPS on Render.
+      # ---- Secrets ----
+      # HS256 signing key: Base64 of >= 32 bytes. Render's generateValue produces a
+      # Base64-encoded 256-bit (32-byte) value, which satisfies JwtService. Rotating it
+      # only logs everyone out, so letting Render own it is fine.
+      - key: JWT_SECRET
+        generateValue: true
+      # AES key for column encryption: Base64 of EXACTLY 16/24/32 bytes.
+      # Deliberately NOT generateValue: the encrypted rows live in Neon, outside Render.
+      # Generate it yourself (`openssl rand -base64 32`) and keep a copy: if this
+      # service is ever recreated with a new key, existing encrypted data is unreadable.
+      - key: APP_ENCRYPTION_KEY
+        sync: false
+
+      # ---- Browser-facing ----
+      # Exact Vercel production origin(s), comma-separated, no trailing slash,
+      # e.g. https://nexuscommerce.vercel.app
+      - key: APP_CORS_ALLOWED_ORIGINS
+        sync: false
+      # Refresh cookie: HTTPS-only. Lax works because the browser only ever talks to
+      # the Vercel origin (same-site via the /api proxy).
       - key: AUTH_COOKIE_SECURE
         value: "true"
+      - key: AUTH_COOKIE_SAMESITE
+        value: Lax
+
+      # ---- JVM sizing for the 512 MB instance (overrides the Dockerfile default) ----
+      # MaxRAMPercentage=60  heap <= ~307 MB; the rest is for metaspace (~120 MB for
+      #                      Spring + Hibernate + Mongo + springdoc), code cache,
+      #                      thread stacks and direct buffers. 75% risks the container
+      #                      being OOM-killed before the JVM itself notices.
+      # UseSerialGC          what the JVM picks anyway on <2 CPUs; explicit so it never
+      #                      switches to G1 (more native memory for its remembered sets).
+      # TieredStopAtLevel=1  C1 JIT only: noticeably faster cold start on 0.1 vCPU and
+      #                      less compiler memory; peak throughput is irrelevant here.
+      # Xss512k              halves per-thread stack reservation (Tomcat capped at 20
+      #                      threads in application-demo.yml).
+      # ExitOnOutOfMemoryError  crash fast so Render restarts the instance instead of
+      #                      leaving a half-dead JVM serving errors.
+      # (spring.jmx.enabled is already false by default in Spring Boot, so not set.)
+      - key: JAVA_TOOL_OPTIONS
+        value: >-
+          -XX:MaxRAMPercentage=60.0 -XX:+UseSerialGC -XX:TieredStopAtLevel=1
+          -Xss512k -XX:+ExitOnOutOfMemoryError

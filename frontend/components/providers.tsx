@@ -4,6 +4,7 @@ import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/components/auth-provider";
 import { Toaster } from "@/components/ui/toaster";
+import { ServerWakeBanner } from "@/components/layout/server-wake-banner";
 import { ApiError } from "@/lib/api";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <AuthProvider>
         {children}
         <Toaster />
+        <ServerWakeBanner />
       </AuthProvider>
     </QueryClientProvider>
   );

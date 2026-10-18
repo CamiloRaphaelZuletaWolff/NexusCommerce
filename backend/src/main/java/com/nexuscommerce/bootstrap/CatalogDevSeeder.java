@@ -28,11 +28,12 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * Seeds demo catalog data (categories, brands, products) for local development.
+ * Seeds demo catalog data (categories, brands, products) for local development
+ * and the public demo deployment.
  * Runs after {@link DevDataInitializer} (which creates the stores it links to).
  */
 @Component
-@Profile("dev")
+@Profile({"dev", "demo"})
 @Order(2)
 @RequiredArgsConstructor
 public class CatalogDevSeeder implements ApplicationRunner {

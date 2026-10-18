@@ -6,6 +6,8 @@
 
 **Spring Boot 3 · Next.js 15 · PostgreSQL · MongoDB · JWT + RBAC · Docker**
 
+[![CI](https://github.com/CamiloRaphaelZuletaWolff/NexusCommerce/actions/workflows/ci.yml/badge.svg)](https://github.com/CamiloRaphaelZuletaWolff/NexusCommerce/actions/workflows/ci.yml)
+
 </div>
 
 ---
@@ -36,6 +38,23 @@ decision records.
   dashboards built with the Next.js App Router and React Server Components.
 - **One-command local infra** — PostgreSQL + MongoDB (+ optional admin UIs) via
   Docker Compose.
+
+## 🌐 Demo en vivo (live demo)
+
+> **Demo:** _https://&lt;tu-proyecto&gt;.vercel.app_ (pending first deploy) ·
+> **API docs:** _https://&lt;tu-backend&gt;.onrender.com/swagger-ui.html_
+
+Hosted for $0: Vercel (frontend) · Render free (backend) · Neon (PostgreSQL) ·
+MongoDB Atlas M0. The backend sleeps after 15 min idle, so the **first request
+can take 2–3 minutes** while it wakes up (the site shows a banner meanwhile).
+
+| Role          | Email                  | Password       |
+|---------------|------------------------|----------------|
+| Customer      | `customer@nexus.local` | `Password123!` |
+| Store manager | `manager@nexus.local`  | `Password123!` |
+| Admin         | `admin@nexus.local`    | `Password123!` |
+
+Step-by-step deployment guide (Spanish): **[DEPLOY.md](DEPLOY.md)**.
 
 ## 🧱 Architecture at a glance
 
@@ -73,7 +92,7 @@ Full setup (backend + frontend) is in **[MANUAL_SETUP_GUIDE.md](MANUAL_SETUP_GUI
 | Frontend  | Next.js 15, React 19, TypeScript, TailwindCSS, shadcn/ui, Framer Motion, Zustand, TanStack Query, React Hook Form, Zod |
 | Backend   | Java 21, Spring Boot 3, Spring Security, Spring Data JPA, Spring Data MongoDB, Flyway, MapStruct, OpenAPI |
 | Databases | PostgreSQL 16, MongoDB 7 |
-| Tooling   | Docker Compose, JUnit 5, Testcontainers, GitHub Actions |
+| Tooling   | Docker Compose, JUnit 5, Testcontainers, GitHub Actions ([`ci.yml`](.github/workflows/ci.yml): `mvn verify` incl. Testcontainers ITs · lint, type-check, Vitest, `next build`) |
 
 ## 📦 Repository layout
 

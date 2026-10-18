@@ -2,6 +2,7 @@ package com.nexuscommerce;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.nexuscommerce.analytics.repository.StoreRevenueViewRepository;
 import com.nexuscommerce.catalog.domain.Product;
 import com.nexuscommerce.catalog.domain.ProductStatus;
 import com.nexuscommerce.catalog.repository.ProductRepository;
@@ -53,6 +54,9 @@ class BackendIntegrationIT {
         registry.add("spring.data.mongodb.uri", MONGO::getReplicaSetUrl);
         registry.add("app.jwt.secret",
                 () -> Base64.getEncoder().encodeToString("integration-test-secret-key-0123456789".getBytes()));
+        // AppEncryptionProperties is @NotBlank and the `test` profile has no default: 32 bytes = AES-256.
+        registry.add("app.encryption.key",
+                () -> Base64.getEncoder().encodeToString("integration-test-aes-key-0123456".getBytes()));
     }
 
     @Autowired
@@ -64,9 +68,19 @@ class BackendIntegrationIT {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private StoreRevenueViewRepository storeRevenueViewRepository;
+
     @Test
     void flywaySeedsRolesInPostgres() {
         assertThat(roleRepository.count()).isEqualTo(3);
+    }
+
+    @Test
+    void unqualifiedNativeSqlResolvesCommerceSchema() {
+        // Fresh Postgres with no role-level search_path (like Neon): native SQL must
+        // still find commerce.v_store_revenue via the pool's connection-init-sql.
+        assertThat(storeRevenueViewRepository.findAboveAverageRevenue()).isEmpty();
     }
 
     @Test

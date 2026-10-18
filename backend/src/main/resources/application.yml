@@ -10,6 +10,11 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:nexuscommerce}}
     username: ${SPRING_DATASOURCE_USERNAME:nexus}
     password: ${SPRING_DATASOURCE_PASSWORD:nexus_local_pw}
+    hikari:
+      # Native SQL (CALL sp_reserve_inventory, v_store_revenue, fn_store_sales_summary)
+      # is schema-unqualified. Locally the role's search_path is set by infra/db init;
+      # managed Postgres (Neon) has no such setup, so pin it per connection.
+      connection-init-sql: SET search_path TO commerce, public
 
   jpa:
     open-in-view: false
@@ -34,6 +39,10 @@ spring:
 server:
   # Render injects PORT; fall back to SERVER_PORT, then 8080 for local/dev.
   port: ${PORT:${SERVER_PORT:8080}}
+  # Deployed behind TLS-terminating proxies (Render, and Vercel's /api rewrite):
+  # honour X-Forwarded-Proto/Host/For so generated URLs (e.g. the Swagger "servers"
+  # entry) use https and request.getRemoteAddr() is the real client IP.
+  forward-headers-strategy: framework
 
 management:
   endpoints:

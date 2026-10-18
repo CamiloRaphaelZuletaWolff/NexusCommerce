@@ -13,8 +13,14 @@ import type {
   StoreResponse,
 } from "@/types/api";
 
+// Server-side fetch needs an ABSOLUTE URL: in production NEXT_PUBLIC_API_BASE_URL
+// is the relative "/api" proxy path, so prefer API_INTERNAL_BASE_URL, then derive
+// it from BACKEND_ORIGIN (the rewrite target), and only then the public value.
 const BASE =
   process.env.API_INTERNAL_BASE_URL ??
+  (process.env.BACKEND_ORIGIN
+    ? `${process.env.BACKEND_ORIGIN.replace(/\/+$/, "")}/api`
+    : undefined) ??
   process.env.NEXT_PUBLIC_API_BASE_URL ??
   "http://localhost:8080/api";
 

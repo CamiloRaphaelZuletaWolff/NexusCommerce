@@ -16,14 +16,14 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * Seeds demo data for local development only.
+ * Seeds demo data for local development and the public demo deployment.
  *
- * <p>DEV-ONLY credentials (documented in MANUAL_SETUP_GUIDE.md):
+ * <p>Well-known DEMO credentials (documented in MANUAL_SETUP_GUIDE.md and DEPLOY.md):
  * admin@nexus.local / manager@nexus.local / customer@nexus.local, password {@code Password123!}.
- * Never enabled outside the {@code dev} profile.
+ * Only enabled under the {@code dev} and {@code demo} profiles — never in a real production profile.
  */
 @Component
-@Profile("dev")
+@Profile({"dev", "demo"})
 @Order(1)
 @RequiredArgsConstructor
 public class DevDataInitializer implements ApplicationRunner {
