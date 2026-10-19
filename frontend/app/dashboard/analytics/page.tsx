@@ -6,12 +6,15 @@ import { Panel } from "@/components/dashboard/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/components/auth-provider";
 import { api } from "@/lib/api";
 import { hueFor } from "@/lib/store-theme";
 import { formatMoney } from "@/lib/utils";
 import type { StoreResponse } from "@/types/api";
 
 export default function AnalyticsPage() {
+  const { user, hasRole } = useAuth();
+  const isAdmin = hasRole("ADMIN");
   const revenue = useQuery({ queryKey: ["an", "revenue"], queryFn: api.analytics.storeRevenue });
   const top = useQuery({ queryKey: ["an", "top", 10], queryFn: () => api.analytics.topProducts(10) });
   const stores = useQuery({ queryKey: ["stores", "all"], queryFn: () => api.stores.list({ size: 100 }) });
@@ -78,7 +81,10 @@ export default function AnalyticsPage() {
         <Panel title="Per-store summary" action={<span className="eyebrow">fn_store_sales_summary()</span>}>
           <Select value={storeId} onChange={(e) => setStoreId(e.target.value)}>
             <option value="">Choose a store…</option>
-            {(stores.data?.content ?? []).map((s) => (
+            {/* Managers can only run the summary for stores they own (403 otherwise). */}
+            {(stores.data?.content ?? [])
+              .filter((s) => isAdmin || s.ownerUserId === user?.id)
+              .map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </Select>

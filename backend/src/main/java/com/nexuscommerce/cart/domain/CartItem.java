@@ -19,6 +19,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CartItem extends BaseEntity {
 
+    /** Per-line quantity cap (also enforced on the request DTOs). */
+    public static final int MAX_QUANTITY = 99;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_id", nullable = false)
     private Cart cart;
@@ -57,6 +60,9 @@ public class CartItem extends BaseEntity {
     }
 
     public void addQuantity(int delta) {
+        if (delta < 1 || this.quantity + delta > MAX_QUANTITY) {
+            throw new IllegalArgumentException("Quantity per item must be between 1 and " + MAX_QUANTITY);
+        }
         this.quantity += delta;
     }
 

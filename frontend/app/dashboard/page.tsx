@@ -6,6 +6,7 @@ import { ArrowRight, DollarSign, Package, ShoppingCart, Store, TrendingUp } from
 import { StatCard, Panel } from "@/components/dashboard/stat-card";
 import { OrderStatusBadge } from "@/components/orders/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/components/auth-provider";
 import { api } from "@/lib/api";
 import { hueFor } from "@/lib/store-theme";
 import { formatCount, formatDate, formatMoney } from "@/lib/utils";
@@ -15,7 +16,14 @@ export default function DashboardOverview() {
   const revenue = useQuery({ queryKey: ["an", "revenue"], queryFn: api.analytics.storeRevenue });
   const aboveAvg = useQuery({ queryKey: ["an", "above"], queryFn: api.analytics.aboveAverage });
   const topProducts = useQuery({ queryKey: ["an", "top", 5], queryFn: () => api.analytics.topProducts(5) });
-  const recent = useQuery({ queryKey: ["an", "orders", 8], queryFn: () => api.analytics.ordersSummary(8) });
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole("ADMIN");
+  // The cross-customer order feed is admin-only on the API; managers see only their stores' figures.
+  const recent = useQuery({
+    queryKey: ["an", "orders", 8],
+    queryFn: () => api.analytics.ordersSummary(8),
+    enabled: isAdmin,
+  });
   const stores = useQuery({ queryKey: ["stores", "all"], queryFn: () => api.stores.list({ size: 100 }) });
 
   const storeMap = new Map<string, StoreResponse>(
@@ -46,7 +54,7 @@ export default function DashboardOverview() {
           [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28 rounded-2xl" />)
         ) : (
           <>
-            <StatCard label="Total revenue" value={formatMoney(totals.revenue)} icon={DollarSign} sub="Paid orders, all stores" />
+            <StatCard label="Total revenue" value={formatMoney(totals.revenue)} icon={DollarSign} sub={isAdmin ? "Paid orders, all stores" : "Paid orders, your stores"} />
             <StatCard label="Orders" value={formatCount(totals.orders)} icon={ShoppingCart} accent="#1e7fff" />
             <StatCard label="Units sold" value={formatCount(totals.units)} icon={Package} accent="#2fa56b" />
             <StatCard label="Active stores" value={String(stores.data?.content.length ?? 0)} icon={Store} accent="#e14b86" />
@@ -55,44 +63,50 @@ export default function DashboardOverview() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        {/* Recent orders */}
-        <Panel
-          title="Recent orders"
-          action={
-            <span className="eyebrow">v_order_summary</span>
-          }
-        >
-          {recent.isLoading ? (
-            <Skeleton className="h-40 w-full" />
-          ) : (recent.data ?? []).length === 0 ? (
-            <Empty>No orders yet.</Empty>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
-                    <th className="pb-2 font-semibold">Order</th>
-                    <th className="pb-2 font-semibold">Status</th>
-                    <th className="pb-2 text-right font-semibold">Items</th>
-                    <th className="pb-2 text-right font-semibold">Total</th>
-                    <th className="pb-2 text-right font-semibold">Placed</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {(recent.data ?? []).map((o) => (
-                    <tr key={o.orderId}>
-                      <td className="tabular py-2.5 font-semibold">{o.orderNumber}</td>
-                      <td className="py-2.5"><OrderStatusBadge status={o.status} /></td>
-                      <td className="tabular py-2.5 text-right">{o.itemCount}</td>
-                      <td className="tabular py-2.5 text-right font-semibold">{formatMoney(o.total)}</td>
-                      <td className="py-2.5 text-right text-ink-faint">{formatDate(o.createdAt)}</td>
+        {/* Recent orders (admin only) */}
+        {isAdmin ? (
+          <Panel
+            title="Recent orders"
+            action={
+              <span className="eyebrow">v_order_summary</span>
+            }
+          >
+            {recent.isLoading ? (
+              <Skeleton className="h-40 w-full" />
+            ) : (recent.data ?? []).length === 0 ? (
+              <Empty>No orders yet.</Empty>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
+                      <th className="pb-2 font-semibold">Order</th>
+                      <th className="pb-2 font-semibold">Status</th>
+                      <th className="pb-2 text-right font-semibold">Items</th>
+                      <th className="pb-2 text-right font-semibold">Total</th>
+                      <th className="pb-2 text-right font-semibold">Placed</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Panel>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {(recent.data ?? []).map((o) => (
+                      <tr key={o.orderId}>
+                        <td className="tabular py-2.5 font-semibold">{o.orderNumber}</td>
+                        <td className="py-2.5"><OrderStatusBadge status={o.status} /></td>
+                        <td className="tabular py-2.5 text-right">{o.itemCount}</td>
+                        <td className="tabular py-2.5 text-right font-semibold">{formatMoney(o.total)}</td>
+                        <td className="py-2.5 text-right text-ink-faint">{formatDate(o.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
+        ) : (
+          <Panel title="Recent orders">
+            <Empty>The platform-wide order feed is visible to admins only.</Empty>
+          </Panel>
+        )}
 
         {/* Above-average + top products */}
         <div className="space-y-6">

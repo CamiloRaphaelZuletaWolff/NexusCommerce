@@ -7,21 +7,34 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Issues, rotates and revokes opaque refresh tokens (stored only as SHA-256 hashes). */
+/**
+ * Issues, rotates and revokes opaque refresh tokens (stored only as SHA-256 hashes).
+ *
+ * <p>Rotation is single-use with <b>reuse detection</b>: presenting a token that was
+ * already rotated means it was copied (or the legitimate client lost a race), so every
+ * active token of that user is revoked and both parties must log in again. A short
+ * grace period tolerates the benign case of two browser tabs refreshing at once.
+ */
 @Service
 @RequiredArgsConstructor
 public class RefreshTokenService {
 
+    private static final Logger log = LoggerFactory.getLogger(RefreshTokenService.class);
     private static final int TOKEN_BYTES = 32; // 256-bit opaque token
+    /** A token re-presented within this window after rotation is treated as a concurrent-tab race. */
+    static final Duration REUSE_GRACE = Duration.ofSeconds(10);
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final AuthProperties authProperties;
@@ -44,16 +57,32 @@ public class RefreshTokenService {
         return new IssuedToken(rawToken, expiresAt);
     }
 
-    @Transactional
+    // noRollbackFor: the reuse-detection revocation must commit even though we then reject the request.
+    @Transactional(noRollbackFor = InvalidTokenException.class)
     public RotationResult rotate(String rawToken, RequestMetadata metadata) {
-        RefreshToken existing = refreshTokenRepository.findByTokenHash(hash(rawToken))
+        Instant now = Instant.now();
+        RefreshToken existing = refreshTokenRepository.findByTokenHashForUpdate(hash(rawToken))
                 .orElseThrow(() -> new InvalidTokenException("Invalid refresh token"));
-        if (!existing.isActive(Instant.now())) {
+        if (existing.getRevokedAt() != null) {
+            if (existing.getRevokedAt().plus(REUSE_GRACE).isBefore(now)) {
+                int revoked = refreshTokenRepository.revokeAllActiveForUser(existing.getUserId(), now);
+                log.warn("Refresh token reuse detected for user {}; revoked {} active token(s)",
+                        existing.getUserId(), revoked);
+            }
             throw new InvalidTokenException("Refresh token expired or revoked");
         }
-        existing.revoke(Instant.now());
+        if (!existing.isActive(now)) {
+            throw new InvalidTokenException("Refresh token expired or revoked");
+        }
+        existing.revoke(now);
         IssuedToken next = issue(existing.getUserId(), metadata);
         return new RotationResult(existing.getUserId(), next);
+    }
+
+    /** Logs a user out everywhere (reuse detection, disabled account, password reset). */
+    @Transactional
+    public int revokeAllForUser(UUID userId) {
+        return refreshTokenRepository.revokeAllActiveForUser(userId, Instant.now());
     }
 
     @Transactional

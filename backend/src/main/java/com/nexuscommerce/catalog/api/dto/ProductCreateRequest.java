@@ -1,6 +1,7 @@
 package com.nexuscommerce.catalog.api.dto;
 
 import com.nexuscommerce.catalog.domain.ProductStatus;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -15,7 +16,7 @@ public record ProductCreateRequest(
         @NotBlank @Size(max = 80) String sku,
         @NotBlank @Size(max = 200) String name,
         @Size(max = 5000) String description,
-        @NotNull @PositiveOrZero BigDecimal price,
+        @NotNull @PositiveOrZero @Digits(integer = 7, fraction = 2) BigDecimal price,
         @Size(max = 3) String currency,
         @NotBlank String categorySlug,
         List<String> categoryLabels,

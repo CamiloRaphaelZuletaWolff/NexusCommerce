@@ -137,4 +137,32 @@ class CartServiceTest {
 
         assertThat(cart.getItems()).isEmpty();
     }
+
+    @Test
+    void addItemRejectsProductsThatAreNotForSale() {
+        Cart cart = new Cart(userId);
+        when(cartRepository.findByUserIdAndStatus(userId, CartStatus.ACTIVE)).thenReturn(Optional.of(cart));
+        ProductResponse active = product();
+        ProductResponse draft = new ProductResponse(active.id(), active.storeId(), active.sku(), active.name(),
+                active.slug(), active.description(), active.price(), active.currency(), active.categorySlug(),
+                active.categoryLabels(), active.tags(), active.brand(), active.variants(), active.attributes(),
+                "DRAFT", 0.0, 0, null, null);
+        when(productService.getById(productId.toString())).thenReturn(draft);
+
+        assertThatThrownBy(() -> cartService.addItem(userId, new AddCartItemRequest(productId.toString(), 1)))
+                .isInstanceOf(ResourceNotFoundException.class);
+        assertThat(cart.getItems()).isEmpty();
+    }
+
+    @Test
+    void mergingQuantitiesCannotExceedThePerLineCap() {
+        Cart cart = new Cart(userId);
+        cart.addItem(lineItem(cart, CartItem.MAX_QUANTITY - 1));
+        when(cartRepository.findByUserIdAndStatus(userId, CartStatus.ACTIVE)).thenReturn(Optional.of(cart));
+        when(productService.getById(productId.toString())).thenReturn(product());
+
+        assertThatThrownBy(() -> cartService.addItem(userId, new AddCartItemRequest(productId.toString(), 2)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(cart.getItems().get(0).getQuantity()).isEqualTo(CartItem.MAX_QUANTITY - 1);
+    }
 }

@@ -46,6 +46,18 @@ public class User extends AuditableEntity {
         this.enabled = true;
     }
 
+    public void changePasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public void enable() {
+        this.enabled = true;
+    }
+
+    public void disable() {
+        this.enabled = false;
+    }
+
     public void addRole(Role role) {
         this.roles.add(role);
     }

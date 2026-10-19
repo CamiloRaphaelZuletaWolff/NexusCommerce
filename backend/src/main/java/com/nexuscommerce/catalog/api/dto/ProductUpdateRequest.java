@@ -1,6 +1,7 @@
 package com.nexuscommerce.catalog.api.dto;
 
 import com.nexuscommerce.catalog.domain.ProductStatus;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
@@ -11,7 +12,7 @@ import java.util.Map;
 public record ProductUpdateRequest(
         @Size(max = 200) String name,
         @Size(max = 5000) String description,
-        @PositiveOrZero BigDecimal price,
+        @PositiveOrZero @Digits(integer = 7, fraction = 2) BigDecimal price,
         @Size(max = 3) String currency,
         String categorySlug,
         List<String> categoryLabels,

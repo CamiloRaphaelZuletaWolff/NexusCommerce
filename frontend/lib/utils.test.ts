@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cn, formatMoney, formatDate, hashToIndex, titleCase } from "@/lib/utils";
+import { cn, formatMoney, formatDate, hashToIndex, safeRedirect, titleCase } from "@/lib/utils";
 
 describe("formatMoney", () => {
   it("formats a USD amount", () => {
@@ -44,5 +44,25 @@ describe("formatDate", () => {
 describe("cn", () => {
   it("resolves conflicting tailwind classes (last wins)", () => {
     expect(cn("p-2", "p-4")).toBe("p-4");
+  });
+});
+
+describe("safeRedirect", () => {
+  it("keeps same-origin paths with query and hash", () => {
+    expect(safeRedirect("/orders/42?success=1#top")).toBe("/orders/42?success=1#top");
+  });
+  it.each([
+    "https://evil.example",
+    "//evil.example",
+    "/\\evil.example",
+    "/\t/evil.example",
+    "javascript:alert(1)",
+    "evil.example",
+    "",
+  ])("rejects %j", (target) => {
+    expect(safeRedirect(target)).toBe("/");
+  });
+  it("uses the fallback for missing values", () => {
+    expect(safeRedirect(undefined, "/catalog")).toBe("/catalog");
   });
 });

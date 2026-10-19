@@ -2,6 +2,7 @@ package com.nexuscommerce.stores.repository;
 
 import com.nexuscommerce.stores.domain.Store;
 import com.nexuscommerce.stores.domain.StoreStatus;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -15,4 +16,6 @@ public interface StoreRepository extends JpaRepository<Store, UUID> {
     boolean existsBySlug(String slug);
 
     Page<Store> findByStatus(StoreStatus status, Pageable pageable);
+
+    List<Store> findByOwnerUserId(UUID ownerUserId);
 }

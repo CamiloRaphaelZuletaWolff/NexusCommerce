@@ -3,6 +3,8 @@ package com.nexuscommerce.auth.refresh;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -64,7 +66,7 @@ class RefreshTokenServiceTest {
         ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
         verify(refreshTokenRepository).save(captor.capture());
         RefreshToken stored = captor.getValue();
-        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(stored));
+        when(refreshTokenRepository.findByTokenHashForUpdate(any())).thenReturn(Optional.of(stored));
 
         RotationResult result = service.rotate(first.rawToken(), metadata);
 
@@ -75,7 +77,7 @@ class RefreshTokenServiceTest {
 
     @Test
     void rotateRejectsUnknownToken() {
-        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.empty());
+        when(refreshTokenRepository.findByTokenHashForUpdate(any())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.rotate("bogus", metadata))
                 .isInstanceOf(InvalidTokenException.class);
@@ -85,9 +87,37 @@ class RefreshTokenServiceTest {
     void rotateRejectsExpiredToken() {
         RefreshToken expired = new RefreshToken(
                 UUID.randomUUID(), "hash", Instant.now().minusSeconds(60), null, null);
-        when(refreshTokenRepository.findByTokenHash(any())).thenReturn(Optional.of(expired));
+        when(refreshTokenRepository.findByTokenHashForUpdate(any())).thenReturn(Optional.of(expired));
 
         assertThatThrownBy(() -> service.rotate("any", metadata))
                 .isInstanceOf(InvalidTokenException.class);
+    }
+
+    @Test
+    void reusingARotatedTokenRevokesEveryActiveTokenOfTheUser() {
+        UUID userId = UUID.randomUUID();
+        RefreshToken rotatedLongAgo = new RefreshToken(
+                userId, "hash", Instant.now().plusSeconds(3600), null, null);
+        rotatedLongAgo.revoke(Instant.now().minus(RefreshTokenService.REUSE_GRACE).minusSeconds(1));
+        when(refreshTokenRepository.findByTokenHashForUpdate(any())).thenReturn(Optional.of(rotatedLongAgo));
+
+        assertThatThrownBy(() -> service.rotate("stolen", metadata))
+                .isInstanceOf(InvalidTokenException.class);
+
+        verify(refreshTokenRepository).revokeAllActiveForUser(eq(userId), any());
+        verify(refreshTokenRepository, never()).save(any());
+    }
+
+    @Test
+    void concurrentTabRaceWithinGraceIsRejectedWithoutRevokingTheFamily() {
+        RefreshToken justRotated = new RefreshToken(
+                UUID.randomUUID(), "hash", Instant.now().plusSeconds(3600), null, null);
+        justRotated.revoke(Instant.now());
+        when(refreshTokenRepository.findByTokenHashForUpdate(any())).thenReturn(Optional.of(justRotated));
+
+        assertThatThrownBy(() -> service.rotate("raced", metadata))
+                .isInstanceOf(InvalidTokenException.class);
+
+        verify(refreshTokenRepository, never()).revokeAllActiveForUser(any(), any());
     }
 }

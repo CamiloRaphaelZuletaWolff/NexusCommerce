@@ -61,6 +61,11 @@ services:
       # service is ever recreated with a new key, existing encrypted data is unreadable.
       - key: APP_ENCRYPTION_KEY
         sync: false
+      # Password for the seeded admin@nexus.local (>= 12 chars). PRIVATE: never put it
+      # in the README. Leave it empty and no admin exists on the public demo (an admin
+      # seeded by an older deploy is disabled). Change it + redeploy = password rotated.
+      - key: DEMO_ADMIN_PASSWORD
+        sync: false
 
       # ---- Browser-facing ----
       # Exact Vercel production origin(s), comma-separated, no trailing slash,

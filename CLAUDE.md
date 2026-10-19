@@ -233,7 +233,9 @@ npm run build
 
 ### Dev demo credentials (dev profile only, never in prod)
 `admin@nexus.local`, `manager@nexus.local`, `customer@nexus.local` — all
-password `Password123!`. Seeded by `DevDataInitializer`.
+password `Password123!`. Seeded by `DevDataInitializer`. The admin password comes
+from `app.demo.admin-password` (`DEMO_ADMIN_PASSWORD`): defaulted only in the `dev`
+profile; in the public `demo` profile it is a private secret (unset = no admin).
 
 ### Build / run the backend (JDK 21 canonical)
 ```bash

@@ -15,8 +15,8 @@ import lombok.NoArgsConstructor;
 
 /**
  * Payment record. Card fields are encrypted at rest (AES-256-GCM via
- * {@link EncryptedStringConverter}); the raw PAN/CVV are never persisted — only an
- * encrypted reference plus the clear {@code last4}/brand for display.
+ * {@link EncryptedStringConverter}); the raw PAN/CVV are never persisted — only a
+ * masked PAN, holder and expiry (encrypted) plus the clear {@code last4}/brand for display.
  */
 @Entity
 @Table(name = "payments")

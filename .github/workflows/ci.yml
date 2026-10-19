@@ -31,7 +31,7 @@ jobs:
           cache: maven
           cache-dependency-path: backend/pom.xml
 
-      # Unit tests (Surefire) + BackendIntegrationIT (Failsafe, Testcontainers:
+      # Unit tests (Surefire) + *IT integration tests (Failsafe, Testcontainers:
       # real PostgreSQL 16 + MongoDB 7 in Docker, which ubuntu-latest provides).
       - name: Build and test
         run: mvn -B -ntp verify

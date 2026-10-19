@@ -7,6 +7,7 @@ import com.nexuscommerce.cart.domain.CartItem;
 import com.nexuscommerce.cart.domain.CartStatus;
 import com.nexuscommerce.cart.repository.CartRepository;
 import com.nexuscommerce.catalog.api.dto.ProductResponse;
+import com.nexuscommerce.catalog.domain.ProductStatus;
 import com.nexuscommerce.catalog.service.ProductService;
 import com.nexuscommerce.shared.error.ResourceNotFoundException;
 import java.util.Optional;
@@ -31,6 +32,10 @@ public class CartService {
     public CartResponse addItem(UUID userId, AddCartItemRequest request) {
         Cart cart = getOrCreate(userId);
         ProductResponse product = productService.getById(request.productId()); // validates + snapshots
+        if (!ProductStatus.ACTIVE.name().equals(product.status())) {
+            // Draft/archived products are not for sale, even if their id is known.
+            throw ResourceNotFoundException.of("Product", request.productId());
+        }
         UUID productId = UUID.fromString(product.id());
 
         cart.getItems().stream()

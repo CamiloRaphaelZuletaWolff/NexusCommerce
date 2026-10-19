@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { toast } from "@/stores/toast";
 import { ApiError } from "@/lib/api";
+import { safeRedirect } from "@/lib/utils";
 
 const schema = z.object({
   fullName: z.string().max(150).optional(),
@@ -42,7 +43,7 @@ export function RegisterForm({ redirectTo }: { redirectTo?: string }) {
         fullName: values.fullName || undefined,
       });
       toast.success("Account created", "You're signed in.");
-      router.push(redirectTo || "/");
+      router.push(safeRedirect(redirectTo));
     } catch (err) {
       const msg =
         err instanceof ApiError && err.status === 409

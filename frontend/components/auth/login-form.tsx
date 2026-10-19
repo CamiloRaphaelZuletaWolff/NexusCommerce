@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
 import { toast } from "@/stores/toast";
 import { ApiError } from "@/lib/api";
+import { safeRedirect } from "@/lib/utils";
 
 const schema = z.object({
   email: z.string().min(1, "Email is required").email("Enter a valid email"),
@@ -19,8 +20,9 @@ const schema = z.object({
 });
 type Values = z.infer<typeof schema>;
 
+// Public demo accounts. The admin account is deliberately NOT listed: its password
+// is a deployment secret (DEMO_ADMIN_PASSWORD), not a published credential.
 const DEMO = [
-  { label: "Admin", email: "admin@nexus.local" },
   { label: "Manager", email: "manager@nexus.local" },
   { label: "Customer", email: "customer@nexus.local" },
 ];
@@ -41,7 +43,7 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
     try {
       await login(values);
       toast.success("Welcome back");
-      router.push(redirectTo || "/");
+      router.push(safeRedirect(redirectTo));
     } catch (err) {
       const msg =
         err instanceof ApiError && err.status === 401

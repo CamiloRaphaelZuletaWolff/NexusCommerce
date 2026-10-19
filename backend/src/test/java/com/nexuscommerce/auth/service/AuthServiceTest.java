@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -13,8 +15,12 @@ import com.nexuscommerce.audit.domain.AuditEventType;
 import com.nexuscommerce.audit.service.AuditService;
 import com.nexuscommerce.auth.dto.LoginRequest;
 import com.nexuscommerce.auth.dto.RegisterRequest;
+import com.nexuscommerce.auth.ratelimit.AuthRateLimiter;
 import com.nexuscommerce.auth.refresh.RefreshTokenService;
 import com.nexuscommerce.auth.refresh.RefreshTokenService.IssuedToken;
+import com.nexuscommerce.auth.refresh.RefreshTokenService.RotationResult;
+import com.nexuscommerce.shared.error.InvalidTokenException;
+import com.nexuscommerce.shared.error.TooManyRequestsException;
 import com.nexuscommerce.security.jwt.JwtService;
 import com.nexuscommerce.shared.web.RequestMetadata;
 import com.nexuscommerce.users.domain.Role;
@@ -39,6 +45,7 @@ class AuthServiceTest {
     @Mock private JwtService jwtService;
     @Mock private RefreshTokenService refreshTokenService;
     @Mock private AuditService auditService;
+    @Mock private AuthRateLimiter rateLimiter;
 
     @InjectMocks private AuthService authService;
 
@@ -92,5 +99,32 @@ class AuthServiceTest {
                 .isInstanceOf(BadCredentialsException.class);
 
         verify(auditService).failure(eq(AuditEventType.LOGIN_FAILURE), isNull(), eq(metadata), any());
+        verify(rateLimiter).recordLoginFailure("alice@nexus.local");
+    }
+
+    @Test
+    void loginRejectedByRateLimiterNeverChecksThePassword() {
+        doThrow(new TooManyRequestsException("Too many attempts. Try again later.", 60))
+                .when(rateLimiter).checkLogin("127.0.0.1", "alice@nexus.local");
+
+        assertThatThrownBy(() -> authService.login(new LoginRequest("Alice@Nexus.local ", "x"), metadata))
+                .isInstanceOf(TooManyRequestsException.class);
+
+        verify(authenticationManager, never()).authenticate(any());
+    }
+
+    @Test
+    void refreshForDisabledUserRevokesSessionsAndFails() {
+        User user = demoUser();
+        user.disable();
+        when(refreshTokenService.rotate("refresh", metadata)).thenReturn(new RotationResult(
+                user.getId(), new IssuedToken("next", Instant.now().plusSeconds(3600))));
+        when(userService.getByIdOrThrow(user.getId())).thenReturn(user);
+
+        assertThatThrownBy(() -> authService.refresh("refresh", metadata))
+                .isInstanceOf(InvalidTokenException.class);
+
+        verify(refreshTokenService).revokeAllForUser(user.getId());
+        verify(jwtService, never()).generateAccessToken(any(), any(), any());
     }
 }

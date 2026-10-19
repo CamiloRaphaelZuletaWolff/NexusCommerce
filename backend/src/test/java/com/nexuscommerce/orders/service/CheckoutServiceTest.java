@@ -20,6 +20,7 @@ import com.nexuscommerce.inventory.service.InventoryService;
 import com.nexuscommerce.orders.api.dto.CheckoutRequest;
 import com.nexuscommerce.orders.api.dto.OrderResponse;
 import com.nexuscommerce.orders.repository.OrderRepository;
+import com.nexuscommerce.payments.domain.Payment;
 import com.nexuscommerce.payments.repository.PaymentRepository;
 import com.nexuscommerce.shared.web.RequestMetadata;
 import java.math.BigDecimal;
@@ -27,6 +28,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -103,5 +105,20 @@ class CheckoutServiceTest {
         verify(orderRepository, never()).save(any());
         verify(paymentRepository, never()).save(any());
         verify(auditService).failure(eq(AuditEventType.CHECKOUT_FAILED), eq(userId), eq(metadata), any());
+    }
+
+    @Test
+    void checkoutNeverPersistsTheFullCardNumberOrCvv() {
+        UUID userId = UUID.randomUUID();
+        when(cartService.getActiveCart(userId)).thenReturn(Optional.of(cartWithItem(userId)));
+        when(orderRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        checkoutService.checkout(userId, request(), metadata);
+
+        ArgumentCaptor<Payment> captor = ArgumentCaptor.forClass(Payment.class);
+        verify(paymentRepository).save(captor.capture());
+        Payment saved = captor.getValue();
+        assertThat(saved.getCardNumber()).isEqualTo("************1111").doesNotContain("4111111111111111");
+        assertThat(saved.getCardLast4()).isEqualTo("1111");
     }
 }

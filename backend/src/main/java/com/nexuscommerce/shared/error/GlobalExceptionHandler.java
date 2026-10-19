@@ -4,11 +4,18 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.TypeMismatchException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.mapping.PropertyReferenceException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -55,6 +62,35 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.FORBIDDEN, "Access denied", request);
     }
 
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ApiError> handleTooManyRequests(TooManyRequestsException ex,
+                                                          HttpServletRequest request) {
+        ApiError body = ApiError.of(HttpStatus.TOO_MANY_REQUESTS.value(),
+                HttpStatus.TOO_MANY_REQUESTS.getReasonPhrase(), ex.getMessage(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.retryAfterSeconds()))
+                .body(body);
+    }
+
+    /**
+     * Malformed JSON, wrong parameter types, unknown {@code ?sort=} properties: client
+     * errors, not 500s, and never echo parser/mapping internals.
+     */
+    @ExceptionHandler({HttpMessageNotReadableException.class, TypeMismatchException.class,
+            PropertyReferenceException.class})
+    public ResponseEntity<ApiError> handleUnreadable(Exception ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Malformed request", request);
+    }
+
+    /** Constraint races (e.g. duplicate key) — generic message so no SQL/constraint names leak. */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex,
+                                                        HttpServletRequest request) {
+        log.warn("Data integrity violation for {} {}: {}", request.getMethod(), request.getRequestURI(),
+                ex.getMostSpecificCause().getClass().getSimpleName());
+        return build(HttpStatus.CONFLICT, "Request conflicts with existing data", request);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleIllegalArgument(IllegalArgumentException ex,
                                                           HttpServletRequest request) {
@@ -63,6 +99,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception ex, HttpServletRequest request) {
+        if (ex instanceof ErrorResponse errorResponse) {
+            // Spring MVC's own 4xx/5xx (404 no handler, 405 method, 415 media type, missing
+            // parameter, method-validation failure...): keep their status, generic message.
+            HttpStatusCode code = errorResponse.getStatusCode();
+            HttpStatus status = HttpStatus.resolve(code.value());
+            return build(status != null ? status : HttpStatus.INTERNAL_SERVER_ERROR,
+                    status != null ? status.getReasonPhrase() : "Request failed", request);
+        }
         log.error("Unhandled exception for {} {}", request.getMethod(), request.getRequestURI(), ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", request);
     }

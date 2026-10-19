@@ -352,6 +352,7 @@ y qué variables pedirte.
    | `SPRING_DATASOURCE_PASSWORD` | La contraseña de Neon |
    | `SPRING_DATA_MONGODB_URI` | La cadena SRV del [§4.4](#44-obtener-la-cadena-de-conexión-srv) |
    | `APP_ENCRYPTION_KEY` | La clave del [§2](#2-generar-secretos) |
+   | `DEMO_ADMIN_PASSWORD` | Contraseña **privada** para `admin@nexus.local` (mínimo 12 caracteres; genera una con el mismo comando del [§2](#2-generar-secretos)). **No la publiques.** Si la dejas vacía, la demo no tiene admin. |
    | `APP_CORS_ALLOWED_ORIGINS` | La URL que **tendrá** tu frontend, p. ej. `https://nexuscommerce.vercel.app` (sin `/` final). Si aún no la sabes, pon esa; la corregirás en el [§6.4](#64-cerrar-el-círculo-cors-en-render). |
 
    `JWT_SECRET` no aparece porque Render lo genera solo; `SPRING_PROFILES_ACTIVE=demo`,
@@ -380,7 +381,7 @@ Qué esperar en el **primer** despliegue:
 | Fase | Duración aprox. | Qué verás en el log |
 |---|---|---|
 | Build Docker (Maven descarga dependencias y compila) | 5–10 min | `mvn ... package`, `BUILD SUCCESS`, `Pushing image` |
-| Arranque de Spring en 0,1 vCPU | 2–5 min (la CPU es mínima; ten paciencia) | `Picked up JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60.0 ...` (normal, no es un error), `Successfully applied 10 migrations to schema "commerce"`, `Started NexusCommerceApplication in ... seconds`, y justo después `Seeded demo user admin@nexus.local [ADMIN]`, `Seeded demo stores`, `Seeded demo catalog: 6 products`, `Seeded inventory for 6 products` |
+| Arranque de Spring en 0,1 vCPU | 2–5 min (la CPU es mínima; ten paciencia) | `Picked up JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60.0 ...` (normal, no es un error), `Successfully applied 10 migrations to schema "commerce"`, `Started NexusCommerceApplication in ... seconds`, y justo después `Seeded demo user admin@nexus.local [ADMIN]` (o el aviso `DEMO_ADMIN_PASSWORD is not set` si la dejaste vacía), `Seeded demo stores`, `Seeded demo catalog: 6 products`, `Seeded inventory for 6 products` |
 | Health check | segundos | El estado pasa a **Live** (verde) |
 
 Los siguientes despliegues son más rápidos y las migraciones/seeds ya no se repiten
@@ -488,13 +489,19 @@ la URL de producción de Vercel:
 Con `SPRING_PROFILES_ACTIVE=demo`, al arrancar se ejecutan los *seeders* de
 `backend/src/main/java/com/nexuscommerce/bootstrap/` (los mismos que en desarrollo):
 
-- **3 usuarios** (contraseña de todos: `Password123!`):
+- **3 usuarios:**
 
-  | Rol | Email | Qué puede hacer |
-  |---|---|---|
-  | `CUSTOMER` | `customer@nexus.local` | Comprar, carrito, checkout, pedidos, cuenta |
-  | `STORE_MANAGER` | `manager@nexus.local` | Lo anterior + dashboard de sus tiendas, crear productos |
-  | `ADMIN` | `admin@nexus.local` | Todo, incluidas las analíticas de la plataforma |
+  | Rol | Email | Contraseña | Qué puede hacer |
+  |---|---|---|---|
+  | `CUSTOMER` | `customer@nexus.local` | `Password123!` (pública) | Comprar, carrito, checkout, pedidos, cuenta |
+  | `STORE_MANAGER` | `manager@nexus.local` | `Password123!` (pública) | Lo anterior + dashboard y analíticas **de sus tiendas**, crear productos |
+  | `ADMIN` | `admin@nexus.local` | `DEMO_ADMIN_PASSWORD` (**privada**) | Todo, incluidas las analíticas de toda la plataforma y el listado de pedidos de todos los clientes |
+
+  El admin **no** usa la contraseña pública: en una demo abierta, publicar la del
+  admin significaría que cualquiera es admin. Su contraseña sale de la variable
+  `DEMO_ADMIN_PASSWORD` de Render; si no está definida no se crea (y un admin creado
+  por un despliegue anterior queda **desactivado**). Para cambiarla, edita la variable
+  y redespliega: al arrancar se re-sincroniza y se cierran sus sesiones abiertas.
 
 - **2 tiendas:** *Nexus Electronics* y *Nexus Fashion* (gestionadas por el manager).
 - **Catálogo en MongoDB:** categorías, marcas y **6 productos** (portátil, móvil,
@@ -505,8 +512,8 @@ Los seeders son **idempotentes**: solo crean lo que falta, así que reiniciar el
 servicio no duplica nada. Para borrar todo y empezar de cero, ver
 [§11](#11-mantenimiento).
 
-> Estas credenciales son públicas a propósito (para reclutadores). No reutilices
-> nunca `Password123!` en nada real.
+> Las credenciales de cliente y manager son públicas a propósito (para reclutadores).
+> No reutilices nunca `Password123!` en nada real.
 
 ---
 
@@ -570,7 +577,12 @@ el móvil):
       letras (`US`), tarjeta de prueba `4111111111111111`, caducidad futura `12/30`,
       CVV `123` → el pedido se crea y aparece en **Orders**.
 - [ ] Cierra sesión → entra con `manager@nexus.local` → **Dashboard** muestra
-      analíticas (incluido el pedido anterior).
+      analíticas de **sus** tiendas (incluido el pedido anterior); el listado de
+      pedidos de todos los clientes solo lo ve el admin.
+- [ ] El botón de cuentas demo del login **no** ofrece "Admin", y
+      `admin@nexus.local` / `Password123!` devuelve *Incorrect email or password*.
+- [ ] Fuerza bruta: 5 contraseñas incorrectas seguidas para la misma cuenta → la
+      6.ª petición devuelve **429** ("Too many attempts") durante 15 min.
 - [ ] Swagger: `https://<tu-backend>.onrender.com/swagger-ui.html` carga y el servidor
       que muestra empieza por **https**.
 
@@ -697,6 +709,8 @@ están enlazados por UUID):
   sesión.
 - `APP_ENCRYPTION_KEY`: **no la cambies** sin resetear los datos antes: los pagos ya
   cifrados dejarían de poder leerse.
+- `DEMO_ADMIN_PASSWORD`: edítala en Render y redespliega; al arrancar se aplica la
+  nueva contraseña y se revocan las sesiones del admin.
 - Contraseñas de Neon/Atlas: cámbialas en su panel y actualiza la variable en Render.
 
 ### (Opcional) Mantener el backend despierto

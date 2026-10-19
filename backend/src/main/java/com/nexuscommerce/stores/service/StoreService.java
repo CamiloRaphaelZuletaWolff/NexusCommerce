@@ -13,7 +13,9 @@ import com.nexuscommerce.stores.mapper.StoreMapper;
 import com.nexuscommerce.stores.repository.StoreRepository;
 import com.nexuscommerce.shared.util.Slugs;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -51,6 +53,14 @@ public class StoreService {
         return storeMapper.toResponse(store);
     }
 
+    /** Ids of the stores a user owns (tenant scope for store managers). */
+    @Transactional(readOnly = true)
+    public Set<UUID> ownedStoreIds(UUID ownerUserId) {
+        return storeRepository.findByOwnerUserId(ownerUserId).stream()
+                .map(Store::getId)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
     @Transactional
     public StoreResponse create(StoreCreateRequest request, UUID ownerUserId, RequestMetadata metadata) {
         String slug = uniqueSlug(request.name());
@@ -76,6 +86,13 @@ public class StoreService {
             store.describe(request.description());
         }
         if (request.status() != null) {
+            // SUSPENDED is a platform moderation action: only an admin may suspend a store
+            // or lift a suspension; owners may only toggle ACTIVE/INACTIVE.
+            boolean touchesSuspension = request.status() == StoreStatus.SUSPENDED
+                    || store.getStatus() == StoreStatus.SUSPENDED;
+            if (touchesSuspension && !isAdmin && request.status() != store.getStatus()) {
+                throw new AccessDeniedException("Only an admin can suspend or reinstate a store");
+            }
             store.changeStatus(request.status());
         }
         return storeMapper.toResponse(store);

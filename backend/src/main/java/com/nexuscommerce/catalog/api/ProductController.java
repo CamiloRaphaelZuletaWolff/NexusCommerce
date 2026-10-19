@@ -10,6 +10,7 @@ import com.nexuscommerce.security.AppPrincipal;
 import com.nexuscommerce.shared.web.RequestMetadata;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +44,7 @@ public class ProductController {
     @GetMapping
     public Page<ProductResponse> search(
             @RequestParam(required = false) String storeId,
-            @RequestParam(required = false) String q,
+            @RequestParam(required = false) @Size(max = 100) String q, // regex-quoted in the repository
             @RequestParam(required = false) List<String> categories,
             @RequestParam(required = false) List<String> tags,
             @RequestParam(required = false) List<String> brands,

@@ -115,9 +115,13 @@ public class CheckoutService {
     private Payment buildPayment(UUID orderId, BigDecimal amount, CheckoutRequest.CardPaymentRequest card) {
         String number = card.number();
         String last4 = number.substring(number.length() - 4);
-        // Card data is encrypted by the entity converter; CVV is never stored.
+        // The full PAN and the CVV are never persisted: payments are simulated, so there is
+        // nothing to charge later, and a public demo must not become a store of real card
+        // numbers people type in. Only a masked PAN (plus holder/expiry) is kept, still
+        // encrypted at rest by the entity converter.
+        String maskedNumber = "*".repeat(number.length() - 4) + last4;
         return new Payment(orderId, PaymentStatus.CAPTURED, PaymentMethod.CARD, amount, "USD",
-                detectBrand(number), last4, card.holderName(), number, card.expiry());
+                detectBrand(number), last4, card.holderName(), maskedNumber, card.expiry());
     }
 
     private static String detectBrand(String number) {

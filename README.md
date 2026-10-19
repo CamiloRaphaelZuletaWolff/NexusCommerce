@@ -52,7 +52,10 @@ can take 2–3 minutes** while it wakes up (the site shows a banner meanwhile).
 |---------------|------------------------|----------------|
 | Customer      | `customer@nexus.local` | `Password123!` |
 | Store manager | `manager@nexus.local`  | `Password123!` |
-| Admin         | `admin@nexus.local`    | `Password123!` |
+
+The platform **admin** account is intentionally not public on the live demo (its
+password is a deployment secret, `DEMO_ADMIN_PASSWORD`); the store-manager dashboard
+shows the analytics for that manager's own stores.
 
 Step-by-step deployment guide (Spanish): **[DEPLOY.md](DEPLOY.md)**.
 

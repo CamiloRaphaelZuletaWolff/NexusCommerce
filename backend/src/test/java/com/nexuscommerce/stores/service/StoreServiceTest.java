@@ -87,6 +87,37 @@ class StoreServiceTest {
     }
 
     @Test
+    void ownerCannotLiftAnAdminSuspension() {
+        storeService = service();
+        UUID ownerId = UUID.randomUUID();
+        UUID storeId = UUID.randomUUID();
+        Store store = new Store(ownerId, "Old", "old", "d", StoreType.ELECTRONICS);
+        store.changeStatus(StoreStatus.SUSPENDED);
+        when(storeRepository.findById(storeId)).thenReturn(Optional.of(store));
+
+        assertThatThrownBy(() -> storeService.update(storeId,
+                new StoreUpdateRequest(null, null, StoreStatus.ACTIVE), ownerId, false))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThat(store.getStatus()).isEqualTo(StoreStatus.SUSPENDED);
+    }
+
+    @Test
+    void ownerCannotSuspendButCanDeactivate() {
+        storeService = service();
+        UUID ownerId = UUID.randomUUID();
+        UUID storeId = UUID.randomUUID();
+        Store store = new Store(ownerId, "Old", "old", "d", StoreType.ELECTRONICS);
+        when(storeRepository.findById(storeId)).thenReturn(Optional.of(store));
+
+        assertThatThrownBy(() -> storeService.update(storeId,
+                new StoreUpdateRequest(null, null, StoreStatus.SUSPENDED), ownerId, false))
+                .isInstanceOf(AccessDeniedException.class);
+
+        storeService.update(storeId, new StoreUpdateRequest(null, null, StoreStatus.INACTIVE), ownerId, false);
+        assertThat(store.getStatus()).isEqualTo(StoreStatus.INACTIVE);
+    }
+
+    @Test
     void adminCanUpdateAnyStore() {
         storeService = service();
         UUID storeId = UUID.randomUUID();

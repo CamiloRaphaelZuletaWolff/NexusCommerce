@@ -21,3 +21,6 @@ app:
   encryption:
     # DEV-ONLY AES-256 key (Base64). NEVER use in production; supply APP_ENCRYPTION_KEY instead.
     key: ${APP_ENCRYPTION_KEY:kCh2wkMoNc9+NNU11xepaMDcIW9rG3KkCSP6XBIH/TA=}
+  demo:
+    # DEV-ONLY: local admin@nexus.local password (the demo profile has NO default).
+    admin-password: ${DEMO_ADMIN_PASSWORD:Password123!}

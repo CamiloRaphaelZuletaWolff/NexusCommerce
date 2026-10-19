@@ -44,6 +44,27 @@ public class UserService {
         return saved;
     }
 
+    /** True if {@code rawPassword} is the user's current password. */
+    public boolean passwordMatches(User user, String rawPassword) {
+        return passwordEncoder.matches(rawPassword, user.getPasswordHash());
+    }
+
+    /** Sets a new password and (re-)enables the account. */
+    @Transactional
+    public void resetPassword(UUID userId, String rawPassword) {
+        User user = getByIdOrThrow(userId);
+        user.changePasswordHash(passwordEncoder.encode(rawPassword));
+        user.enable();
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void disable(UUID userId) {
+        User user = getByIdOrThrow(userId);
+        user.disable();
+        userRepository.save(user);
+    }
+
     @Transactional(readOnly = true)
     public User getByIdOrThrow(UUID id) {
         return userRepository.findById(id)
