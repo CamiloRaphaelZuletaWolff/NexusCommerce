@@ -52,3 +52,15 @@ coverage/
 .agents/
 .claude/
 skills-lock.json
+
+# ---- graphify (grafo de conocimiento generado localmente) ----
+graphify-out/
+
+# ---- Keys / dumps / deploy tooling ----
+*.pem
+*.key
+*.p12
+*.dump
+.vercel/
+**/test-results/
+**/playwright-report/
